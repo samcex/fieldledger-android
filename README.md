@@ -7,6 +7,8 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 - Log jobs with customer, service window, labor rate, billed materials, costs, and invoice stage
 - See weekly billed totals, estimated profit, and outstanding invoice follow-ups
 - Keep an offline history of all logged work
+- Guide first-time users through a lightweight onboarding flow
+- Support multiple customer-facing currencies from Settings
 - Prepare a monetization path through Google Play subscriptions
 
 ## Repo Contents
@@ -15,13 +17,16 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 - Room persistence for local-first job storage
 - Google Play Billing integration scaffold for `Pro`
 - Monetization notes in [`docs/monetization-strategy.md`](/root/shiftledger-android/docs/monetization-strategy.md)
+- Play Store copy and asset source files in [`docs/play-store/listing.md`](/root/shiftledger-android/docs/play-store/listing.md)
 - Release notes in [`docs/releases/v0.1.0.md`](/root/shiftledger-android/docs/releases/v0.1.0.md)
 
 ## Current MVP
 
 - Dashboard with weekly revenue, costs, profit, and open follow-ups
+- First-launch onboarding with default currency selection
 - Job entry form with live invoice/profit preview
 - Job pipeline/history screen with invoice stage badges
+- Settings screen for currency preferences
 - Google Play subscription paywall shell
 - Debug APK build for device testing
 
@@ -70,4 +75,5 @@ Reference material:
 1. Add invoice/PDF export.
 2. Replace client-side billing state with server-side purchase verification.
 3. Add reminder workflows for unpaid jobs.
-4. Create release and Play signing configs for production.
+4. Export the branded SVG store assets to final PNGs for Play Console.
+5. Create release and Play signing configs for production.

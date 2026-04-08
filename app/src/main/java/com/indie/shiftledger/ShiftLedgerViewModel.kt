@@ -38,6 +38,7 @@ class FieldLedgerViewModel(
         jobRepository.jobs,
         billingRepository.uiState,
         settingsRepository.currency,
+        settingsRepository.onboardingComplete,
         selectedTab,
         draft,
         snackMessage,
@@ -46,15 +47,17 @@ class FieldLedgerViewModel(
         val jobs = values[0] as List<JobRecord>
         val billing = values[1] as BillingUiState
         val currency = values[2] as CurrencyOption
-        val tab = values[3] as FieldLedgerTab
-        val currentDraft = values[4] as JobDraft
-        val message = values[5] as String?
+        val onboardingComplete = values[3] as Boolean
+        val tab = values[4] as FieldLedgerTab
+        val currentDraft = values[5] as JobDraft
+        val message = values[6] as String?
 
         FieldLedgerUiState(
             jobs = jobs,
             dashboard = DashboardSnapshot.fromJobs(jobs),
             billing = billing,
             currency = currency,
+            showOnboarding = !onboardingComplete,
             selectedTab = tab,
             draft = currentDraft,
             snackbarMessage = message,
@@ -80,6 +83,12 @@ class FieldLedgerViewModel(
     fun updateCurrency(currency: CurrencyOption) {
         settingsRepository.updateCurrency(currency)
         snackMessage.value = "Currency changed to ${currency.code}."
+    }
+
+    fun completeOnboarding() {
+        settingsRepository.completeOnboarding()
+        selectedTab.value = FieldLedgerTab.Dashboard
+        snackMessage.value = "Ready to log the first job."
     }
 
     fun saveDraft() {
@@ -154,6 +163,7 @@ data class FieldLedgerUiState(
     val dashboard: DashboardSnapshot = DashboardSnapshot(),
     val billing: BillingUiState = BillingUiState(),
     val currency: CurrencyOption = CurrencyOption.USD,
+    val showOnboarding: Boolean = true,
     val selectedTab: FieldLedgerTab = FieldLedgerTab.Dashboard,
     val draft: JobDraft = JobDraft(),
     val snackbarMessage: String? = null,

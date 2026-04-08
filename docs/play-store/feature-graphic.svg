@@ -1,0 +1,20 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="500" rx="36" fill="#F4F7FB"/>
+  <rect x="42" y="42" width="940" height="416" rx="32" fill="url(#bg)"/>
+  <rect x="620" y="116" width="250" height="250" rx="54" fill="white" fill-opacity="0.16"/>
+  <rect x="672" y="156" width="146" height="170" rx="28" fill="white"/>
+  <rect x="706" y="188" width="42" height="106" rx="14" fill="#245BFF"/>
+  <rect x="760" y="202" width="34" height="58" rx="12" fill="#0B8F84"/>
+  <rect x="760" y="268" width="34" height="26" rx="12" fill="#F17C47"/>
+  <text x="94" y="168" fill="white" font-family="Arial, sans-serif" font-size="28" font-weight="700">FIELDLEDGER</text>
+  <text x="94" y="232" fill="white" font-family="Arial, sans-serif" font-size="62" font-weight="700">Log jobs.</text>
+  <text x="94" y="300" fill="white" font-family="Arial, sans-serif" font-size="62" font-weight="700">See profit.</text>
+  <text x="94" y="368" fill="white" font-family="Arial, sans-serif" font-size="62" font-weight="700">Chase payment.</text>
+  <text x="94" y="418" fill="white" fill-opacity="0.88" font-family="Arial, sans-serif" font-size="24">Offline-first admin relief for solo tradespeople and field operators.</text>
+  <defs>
+    <linearGradient id="bg" x1="42" y1="42" x2="982" y2="458" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#245BFF"/>
+      <stop offset="1" stop-color="#F17C47"/>
+    </linearGradient>
+  </defs>
+</svg>

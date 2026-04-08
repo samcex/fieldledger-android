@@ -48,6 +48,7 @@ import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.ui.screens.DashboardScreen
 import com.indie.shiftledger.ui.screens.HistoryScreen
 import com.indie.shiftledger.ui.screens.JobFormScreen
+import com.indie.shiftledger.ui.screens.OnboardingScreen
 import com.indie.shiftledger.ui.screens.PaywallScreen
 import com.indie.shiftledger.ui.screens.SettingsScreen
 
@@ -65,6 +66,120 @@ fun FieldLedgerApp(
         viewModel.dismissMessage()
     }
 
+    AppBackdrop {
+        if (uiState.showOnboarding) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Transparent,
+                snackbarHost = {
+                    SnackbarHost(hostState = snackbarHostState)
+                },
+            ) { innerPadding ->
+                OnboardingScreen(
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    contentPadding = PaddingValues(
+                        start = 20.dp,
+                        top = innerPadding.calculateTopPadding() + 20.dp,
+                        end = 20.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 20.dp,
+                    ),
+                    currency = uiState.currency,
+                    onCurrencySelected = viewModel::updateCurrency,
+                    onContinue = viewModel::completeOnboarding,
+                )
+            }
+        } else {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Transparent,
+                topBar = {
+                    AppChrome(
+                        selectedTab = uiState.selectedTab,
+                        currency = uiState.currency,
+                        isPro = uiState.billing.isPro,
+                    )
+                },
+                bottomBar = {
+                    FieldLedgerBottomBar(
+                        selectedTab = uiState.selectedTab,
+                        isPro = uiState.billing.isPro,
+                        onSelect = viewModel::selectTab,
+                    )
+                },
+                snackbarHost = {
+                    SnackbarHost(hostState = snackbarHostState)
+                },
+            ) { innerPadding ->
+                val contentPadding = PaddingValues(
+                    start = 20.dp,
+                    top = innerPadding.calculateTopPadding() + 8.dp,
+                    end = 20.dp,
+                    bottom = innerPadding.calculateBottomPadding() + 8.dp,
+                )
+
+                when (uiState.selectedTab) {
+                    FieldLedgerTab.Dashboard -> DashboardScreen(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        contentPadding = contentPadding,
+                        snapshot = uiState.dashboard,
+                        recentJobs = uiState.jobs.take(4),
+                        billing = uiState.billing,
+                        currency = uiState.currency,
+                        jobCount = uiState.jobs.size,
+                        remainingFreeEntries = uiState.remainingFreeEntries,
+                        onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
+                    )
+
+                    FieldLedgerTab.AddJob -> JobFormScreen(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        contentPadding = contentPadding,
+                        draft = uiState.draft,
+                        billing = uiState.billing,
+                        currency = uiState.currency,
+                        jobCount = uiState.jobs.size,
+                        remainingFreeEntries = uiState.remainingFreeEntries,
+                        onDraftChange = { updater -> viewModel.updateDraft(updater) },
+                        onSave = viewModel::saveDraft,
+                        onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
+                    )
+
+                    FieldLedgerTab.History -> HistoryScreen(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        contentPadding = contentPadding,
+                        jobs = uiState.jobs,
+                        currency = uiState.currency,
+                        onDelete = viewModel::deleteJob,
+                    )
+
+                    FieldLedgerTab.Pro -> PaywallScreen(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        contentPadding = contentPadding,
+                        billing = uiState.billing,
+                        resolveOffer = viewModel::proOfferByProductId,
+                        onRefresh = viewModel::refreshBilling,
+                        onPurchase = { offer ->
+                            context.findActivity()?.let { activity ->
+                                viewModel.launchPurchase(activity, offer)
+                            }
+                        },
+                    )
+
+                    FieldLedgerTab.Settings -> SettingsScreen(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        contentPadding = contentPadding,
+                        currency = uiState.currency,
+                        onCurrencySelected = viewModel::updateCurrency,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppBackdrop(
+    content: @Composable () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -78,89 +193,7 @@ fun FieldLedgerApp(
                 ),
             ),
     ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color.Transparent,
-            topBar = {
-                AppChrome(
-                    selectedTab = uiState.selectedTab,
-                    currency = uiState.currency,
-                    isPro = uiState.billing.isPro,
-                )
-            },
-            bottomBar = {
-                FieldLedgerBottomBar(
-                    selectedTab = uiState.selectedTab,
-                    isPro = uiState.billing.isPro,
-                    onSelect = viewModel::selectTab,
-                )
-            },
-            snackbarHost = {
-                SnackbarHost(hostState = snackbarHostState)
-            },
-        ) { innerPadding ->
-            val contentPadding = PaddingValues(
-                start = 20.dp,
-                top = innerPadding.calculateTopPadding() + 8.dp,
-                end = 20.dp,
-                bottom = innerPadding.calculateBottomPadding() + 8.dp,
-            )
-
-            when (uiState.selectedTab) {
-                FieldLedgerTab.Dashboard -> DashboardScreen(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    contentPadding = contentPadding,
-                    snapshot = uiState.dashboard,
-                    recentJobs = uiState.jobs.take(4),
-                    billing = uiState.billing,
-                    currency = uiState.currency,
-                    jobCount = uiState.jobs.size,
-                    remainingFreeEntries = uiState.remainingFreeEntries,
-                    onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
-                )
-
-                FieldLedgerTab.AddJob -> JobFormScreen(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    contentPadding = contentPadding,
-                    draft = uiState.draft,
-                    billing = uiState.billing,
-                    currency = uiState.currency,
-                    jobCount = uiState.jobs.size,
-                    remainingFreeEntries = uiState.remainingFreeEntries,
-                    onDraftChange = { updater -> viewModel.updateDraft(updater) },
-                    onSave = viewModel::saveDraft,
-                    onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
-                )
-
-                FieldLedgerTab.History -> HistoryScreen(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    contentPadding = contentPadding,
-                    jobs = uiState.jobs,
-                    currency = uiState.currency,
-                    onDelete = viewModel::deleteJob,
-                )
-
-                FieldLedgerTab.Pro -> PaywallScreen(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    contentPadding = contentPadding,
-                    billing = uiState.billing,
-                    resolveOffer = viewModel::proOfferByProductId,
-                    onRefresh = viewModel::refreshBilling,
-                    onPurchase = { offer ->
-                        context.findActivity()?.let { activity ->
-                            viewModel.launchPurchase(activity, offer)
-                        }
-                    },
-                )
-
-                FieldLedgerTab.Settings -> SettingsScreen(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    contentPadding = contentPadding,
-                    currency = uiState.currency,
-                    onCurrencySelected = viewModel::updateCurrency,
-                )
-            }
-        }
+        content()
     }
 }
 
