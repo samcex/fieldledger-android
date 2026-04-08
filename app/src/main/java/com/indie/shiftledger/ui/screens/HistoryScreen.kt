@@ -12,14 +12,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.JobRecord
 import com.indie.shiftledger.model.formatCurrency
 import com.indie.shiftledger.model.formatShortDate
@@ -29,15 +32,45 @@ fun HistoryScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues,
     jobs: List<JobRecord>,
+    currency: CurrencyOption,
     onDelete: (Long) -> Unit,
 ) {
+    val openJobs = jobs.count { it.invoiceStatus.isOutstanding }
+    val paidJobs = jobs.size - openJobs
+    val outstandingValue = jobs
+        .filter { it.invoiceStatus.isOutstanding }
+        .sumOf { it.invoiceTotal }
+
     LazyColumn(
         modifier = modifier,
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(text = "Job pipeline", style = MaterialTheme.typography.titleMedium)
+            Card(
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(text = "Job pipeline", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "Stay on top of quotes, sent invoices, and paid work without leaving the timeline.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SummaryPill(label = "${jobs.size} total")
+                        SummaryPill(label = "$openJobs open")
+                        SummaryPill(label = "$paidJobs paid")
+                    }
+                    Text(
+                        text = "Outstanding value: ${formatCurrency(outstandingValue, currency)}",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
         }
 
         if (jobs.isEmpty()) {
@@ -57,7 +90,10 @@ fun HistoryScreen(
             }
         } else {
             items(jobs, key = { it.id }) { job ->
-                Card(shape = RoundedCornerShape(22.dp)) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -87,7 +123,7 @@ fun HistoryScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = "Invoice ${formatCurrency(job.invoiceTotal)}  •  Profit ${formatCurrency(job.estimatedProfit)}  •  Costs ${formatCurrency(job.totalCosts)}",
+                            text = "Invoice ${formatCurrency(job.invoiceTotal, currency)}  •  Profit ${formatCurrency(job.estimatedProfit, currency)}  •  Costs ${formatCurrency(job.totalCosts, currency)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         if (job.siteAddress.isNotBlank()) {
@@ -100,5 +136,19 @@ fun HistoryScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryPill(label: String) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }

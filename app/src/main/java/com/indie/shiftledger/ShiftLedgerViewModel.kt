@@ -9,6 +9,8 @@ import com.indie.shiftledger.billing.BillingRepository
 import com.indie.shiftledger.billing.BillingUiState
 import com.indie.shiftledger.data.JobDatabase
 import com.indie.shiftledger.data.JobRepository
+import com.indie.shiftledger.data.SettingsRepository
+import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.DashboardSnapshot
 import com.indie.shiftledger.model.DisplayOffer
 import com.indie.shiftledger.model.JobDraft
@@ -26,6 +28,7 @@ import kotlinx.coroutines.launch
 class FieldLedgerViewModel(
     private val jobRepository: JobRepository,
     private val billingRepository: BillingRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
     private val selectedTab = MutableStateFlow(FieldLedgerTab.Dashboard)
     private val draft = MutableStateFlow(JobDraft())
@@ -34,14 +37,24 @@ class FieldLedgerViewModel(
     val uiState: StateFlow<FieldLedgerUiState> = combine(
         jobRepository.jobs,
         billingRepository.uiState,
+        settingsRepository.currency,
         selectedTab,
         draft,
         snackMessage,
-    ) { jobs, billing, tab, currentDraft, message ->
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        val jobs = values[0] as List<JobRecord>
+        val billing = values[1] as BillingUiState
+        val currency = values[2] as CurrencyOption
+        val tab = values[3] as FieldLedgerTab
+        val currentDraft = values[4] as JobDraft
+        val message = values[5] as String?
+
         FieldLedgerUiState(
             jobs = jobs,
             dashboard = DashboardSnapshot.fromJobs(jobs),
             billing = billing,
+            currency = currency,
             selectedTab = tab,
             draft = currentDraft,
             snackbarMessage = message,
@@ -62,6 +75,11 @@ class FieldLedgerViewModel(
 
     fun updateDraft(transform: (JobDraft) -> JobDraft) {
         draft.update(transform)
+    }
+
+    fun updateCurrency(currency: CurrencyOption) {
+        settingsRepository.updateCurrency(currency)
+        snackMessage.value = "Currency changed to ${currency.code}."
     }
 
     fun saveDraft() {
@@ -123,7 +141,8 @@ class FieldLedgerViewModel(
                     val database = JobDatabase.build(appContext)
                     val repository = JobRepository(database.jobDao())
                     val billing = BillingRepository(appContext)
-                    return FieldLedgerViewModel(repository, billing) as T
+                    val settings = SettingsRepository(appContext)
+                    return FieldLedgerViewModel(repository, billing, settings) as T
                 }
             }
         }
@@ -134,6 +153,7 @@ data class FieldLedgerUiState(
     val jobs: List<JobRecord> = emptyList(),
     val dashboard: DashboardSnapshot = DashboardSnapshot(),
     val billing: BillingUiState = BillingUiState(),
+    val currency: CurrencyOption = CurrencyOption.USD,
     val selectedTab: FieldLedgerTab = FieldLedgerTab.Dashboard,
     val draft: JobDraft = JobDraft(),
     val snackbarMessage: String? = null,
@@ -144,7 +164,8 @@ data class FieldLedgerUiState(
 
 enum class FieldLedgerTab {
     Dashboard,
-    AddShift,
+    AddJob,
     History,
     Pro,
+    Settings,
 }
