@@ -18,7 +18,7 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 - Google Play Billing integration scaffold for `Pro`
 - Monetization notes in [`docs/monetization-strategy.md`](/root/shiftledger-android/docs/monetization-strategy.md)
 - Play Store copy and asset source files in [`docs/play-store/listing.md`](/root/shiftledger-android/docs/play-store/listing.md)
-- Release notes in [`docs/releases/v0.1.0.md`](/root/shiftledger-android/docs/releases/v0.1.0.md)
+- Release notes in [`docs/releases/v0.2.0.md`](/root/shiftledger-android/docs/releases/v0.2.0.md)
 
 ## Current MVP
 
