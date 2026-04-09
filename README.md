@@ -14,6 +14,7 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 ## Repo Contents
 
 - Kotlin + Jetpack Compose Android app
+- Browser-based web app in [`webapp/index.html`](/root/shiftledger-android/webapp/index.html)
 - Room persistence for local-first job storage
 - Google Play Billing integration with backend-verification client
 - Node backend verifier in [`backend/README.md`](/root/shiftledger-android/backend/README.md)
@@ -29,6 +30,7 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 - Job entry form with live invoice/profit preview, due date, and reminder fields
 - Job pipeline/history screen with invoice export and reminder actions
 - Settings screen for currency preferences
+- Responsive web app with matching onboarding, dashboard, job entry, history, settings, and paywall flows
 - PDF invoice summary export and share flow
 - Local unpaid reminder notifications
 - Google Play subscription paywall wired for backend verification
@@ -59,6 +61,25 @@ Important limits:
 ./gradlew assembleDebug
 ./gradlew bundleRelease
 ```
+
+To run the web app:
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+Then open `http://localhost:8787`.
+
+## Netlify Deploy
+
+The repository now includes [`netlify.toml`](/root/shiftledger-android/netlify.toml) for the web app.
+
+- Publish directory: `webapp`
+- No build step required
+- SPA routes are redirected to `index.html`
+- `/api/web-config` is served from the static fallback at [`webapp/api/web-config.json`](/root/shiftledger-android/webapp/api/web-config.json) when deployed on Netlify
 
 Outputs:
 

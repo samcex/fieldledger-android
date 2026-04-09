@@ -2,6 +2,8 @@
 
 This backend verifies Google Play subscription purchases before the Android app grants `Pro`.
 
+It also serves the browser-based FieldLedger web app from `../webapp`.
+
 ## What It Does
 
 - Accepts the app package name, purchase token, and product IDs from the Android client
@@ -24,7 +26,19 @@ npm install
 npm start
 ```
 
-The verifier starts on `http://localhost:8787` by default.
+The server starts on `http://localhost:8787` by default.
+
+## Web App
+
+Open `http://localhost:8787` after the backend starts to load the web app.
+
+Optional preview flags:
+
+- `FIELDLEDGER_WEB_FORCE_PRO=true` unlocks Pro-only web features for internal testing
+- `FIELDLEDGER_WEB_YEARLY_CHECKOUT_URL=https://...` enables the yearly plan button
+- `FIELDLEDGER_WEB_MONTHLY_CHECKOUT_URL=https://...` enables the monthly plan button
+
+The current web paywall is a preview shell. Real web subscription verification still needs a dedicated web billing flow.
 
 ## Android App Configuration
 

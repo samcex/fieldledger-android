@@ -1,0 +1,5 @@
+{
+  "name": "fieldledger-webapp",
+  "private": true,
+  "type": "module"
+}

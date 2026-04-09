@@ -1,11 +1,17 @@
 import dotenv from "dotenv";
 import express from "express";
 import { GoogleAuth } from "google-auth-library";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const webRoot = path.resolve(__dirname, "../webapp");
 
 const androidPublisherScope = "https://www.googleapis.com/auth/androidpublisher";
 const allowedPackageName = process.env.PLAY_PACKAGE_NAME;
@@ -43,6 +49,38 @@ function matchingLineItems(lineItems, requestedProductIds) {
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.get("/api/web-config", (_req, res) => {
+  const yearlyCheckoutUrl = process.env.FIELDLEDGER_WEB_YEARLY_CHECKOUT_URL || null;
+  const monthlyCheckoutUrl = process.env.FIELDLEDGER_WEB_MONTHLY_CHECKOUT_URL || null;
+  const forcePro = ["1", "true", "yes"].includes(
+    String(process.env.FIELDLEDGER_WEB_FORCE_PRO || "").toLowerCase(),
+  );
+
+  res.json({
+    forcePro,
+    offers: [
+      {
+        productId: "field_ledger_pro_yearly",
+        title: "Pro Yearly",
+        description: "Best value for solo operators who invoice every week",
+        price: "$59.99 / year",
+        purchaseUrl: yearlyCheckoutUrl,
+      },
+      {
+        productId: "field_ledger_pro_monthly",
+        title: "Pro Monthly",
+        description: "Lower commitment while testing the workflow",
+        price: "$6.99 / month",
+        purchaseUrl: monthlyCheckoutUrl,
+      },
+    ],
+  });
 });
 
 app.post("/verify/google-play-subscription", async (req, res) => {
@@ -118,6 +156,25 @@ app.post("/verify/google-play-subscription", async (req, res) => {
       message: error instanceof Error ? error.message : "Unexpected verifier failure.",
     });
   }
+});
+
+app.use(express.static(webRoot));
+
+app.use((req, res, next) => {
+  if (req.method !== "GET") {
+    next();
+    return;
+  }
+  if (
+    req.path.startsWith("/api/") ||
+    req.path.startsWith("/verify/") ||
+    req.path === "/health"
+  ) {
+    next();
+    return;
+  }
+
+  res.sendFile(path.join(webRoot, "index.html"));
 });
 
 const port = Number(process.env.PORT || 8787);

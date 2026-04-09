@@ -1,0 +1,19 @@
+{
+  "forcePro": false,
+  "offers": [
+    {
+      "productId": "field_ledger_pro_yearly",
+      "title": "Pro Yearly",
+      "description": "Best value for solo operators who invoice every week",
+      "price": "$59.99 / year",
+      "purchaseUrl": null
+    },
+    {
+      "productId": "field_ledger_pro_monthly",
+      "title": "Pro Monthly",
+      "description": "Lower commitment while testing the workflow",
+      "price": "$6.99 / month",
+      "purchaseUrl": null
+    }
+  ]
+}
