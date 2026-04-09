@@ -3,7 +3,6 @@ package com.indie.shiftledger.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PostAdd
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
@@ -47,42 +47,50 @@ fun OnboardingScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary,
-                            ),
-                        ),
-                        shape = RoundedCornerShape(30.dp),
-                    )
-                    .padding(24.dp),
+            Card(
+                shape = RoundedCornerShape(34.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                    MaterialTheme.colorScheme.secondary,
+                                ),
+                            ),
+                        )
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     Surface(
                         shape = RoundedCornerShape(999.dp),
-                        color = Color.White.copy(alpha = 0.16f),
+                        color = Color.White.copy(alpha = 0.14f),
                     ) {
                         Text(
-                            text = "FieldLedger for solo operators",
+                            text = "FIELD TOOL, NOT BACK-OFFICE SOFTWARE",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.labelLarge,
                             color = Color.White,
                         )
                     }
                     Text(
-                        text = "Log the job before you leave the driveway.",
+                        text = "Log the job while you are still on site.",
                         style = MaterialTheme.typography.headlineSmall,
                         color = Color.White,
                     )
                     Text(
-                        text = "Capture work, see invoice totals instantly, and keep follow-ups visible without a spreadsheet.",
+                        text = "FieldLedger keeps the money side of the work visible without turning your phone into a spreadsheet.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.92f),
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        IntroTag(label = "Invoices")
+                        IntroTag(label = "Reminders")
+                        IntroTag(label = currency.code)
+                    }
                 }
             }
         }
@@ -90,37 +98,60 @@ fun OnboardingScreen(
         item {
             FeatureCard(
                 icon = Icons.Rounded.PostAdd,
-                title = "Fast field capture",
-                body = "Save customer, work window, costs, and notes while the details are still fresh.",
+                title = "Capture fast",
+                body = "Save the job, hours, costs, and notes before details drift or get lost in chat threads.",
             )
         }
 
         item {
             FeatureCard(
                 icon = Icons.Rounded.Dashboard,
-                title = "Money at a glance",
-                body = "See billed totals, estimated profit, and outstanding follow-ups without waiting for bookkeeping.",
+                title = "Read the numbers",
+                body = "Weekly billed totals, profit, and outstanding work stay visible from the first saved job.",
             )
         }
 
         item {
             FeatureCard(
-                icon = Icons.Rounded.Settings,
-                title = "Built for your market",
-                body = "Pick the currency your customers expect now. You can change it later in Settings.",
+                icon = Icons.Rounded.Notifications,
+                title = "Keep follow-ups moving",
+                body = "Due dates, reminder dates, and invoice export stop open work from quietly going cold.",
             )
         }
 
         item {
             Card(
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 Column(
                     modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(text = "Choose your default currency", style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Settings,
+                                contentDescription = null,
+                                modifier = Modifier.padding(12.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(text = "Choose your billing currency", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "This sets how money is shown across the dashboard, form preview, and history.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -136,7 +167,6 @@ fun OnboardingScreen(
                     Text(
                         text = "Current selection: ${currency.displayLabel}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -154,13 +184,30 @@ fun OnboardingScreen(
 }
 
 @Composable
+private fun IntroTag(
+    label: String,
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = Color.White.copy(alpha = 0.16f),
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+        )
+    }
+}
+
+@Composable
 private fun FeatureCard(
     icon: ImageVector,
     title: String,
     body: String,
 ) {
     Card(
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Row(
@@ -172,13 +219,13 @@ private fun FeatureCard(
         ) {
             Surface(
                 shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.padding(12.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.secondary,
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -14,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,31 +37,45 @@ fun SettingsScreen(
     ) {
         item {
             Card(
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ),
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(text = "Formatting and currency", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Money formatting", style = MaterialTheme.typography.titleLarge)
                     Text(
-                        text = "Pick the currency your customers expect. Totals, invoice previews, dashboard metrics, and job history all update instantly.",
+                        text = "Choose the currency your customers expect and the rest of the app follows it immediately.",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text(
-                        text = "Current: ${currency.displayLabel}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = "Current format",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(text = currency.displayLabel, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "Sample invoice ${formatCurrency(1285.50, currency)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
                 }
             }
         }
 
         item {
-            Text(text = "Currency options", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Available currencies", style = MaterialTheme.typography.titleMedium)
         }
 
         items(CurrencyOption.entries, key = { it.code }) { option ->
@@ -73,28 +88,19 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(26.dp),
+                shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 Column(
                     modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(text = "Preview", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Revenue ${formatCurrency(3210.40, currency)}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Costs ${formatCurrency(685.10, currency)}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Profit ${formatCurrency(2525.30, currency)}", style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        text = "Job total: ${formatCurrency(1285.50, currency)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = "Costs: ${formatCurrency(214.75, currency)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = "Profit: ${formatCurrency(1070.75, currency)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = "Currency formatting is saved on this device.",
+                        text = "Currency formatting is saved locally on this device.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -114,7 +120,7 @@ private fun CurrencyOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSelect),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.secondaryContainer
@@ -140,7 +146,7 @@ private fun CurrencyOptionCard(
             ) {
                 Text(text = option.displayLabel, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = "Stored as ${option.code} for future sessions.",
+                    text = "Symbol ${option.symbol}  •  Code ${option.code}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

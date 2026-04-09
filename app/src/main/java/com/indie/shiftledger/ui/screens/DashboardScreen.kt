@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -55,11 +54,11 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            HeroCard(snapshot = snapshot, currency = currency)
+            RevenueHero(snapshot = snapshot, currency = currency)
         }
 
         item {
-            MetricsGrid(snapshot = snapshot, currency = currency)
+            PulseBoard(snapshot = snapshot, currency = currency)
         }
 
         if (!billing.isPro) {
@@ -83,11 +82,11 @@ fun DashboardScreen(
 
         item {
             SectionHeader(
-                title = "Recent jobs",
+                title = "Latest work",
                 subtitle = if (recentJobs.isEmpty()) {
-                    "Your latest jobs will show here as soon as you save one."
+                    "Save the first job and this screen turns into a working ledger."
                 } else {
-                    "The last ${recentJobs.size} jobs with invoice status and profit at a glance."
+                    "The newest jobs with invoice value, status, and due pressure in one glance."
                 },
             )
         }
@@ -96,7 +95,7 @@ fun DashboardScreen(
             item {
                 InfoCard(
                     title = "Nothing logged yet",
-                    body = "Add the first job and the app will start showing weekly billed totals, profit, and open invoice follow-ups.",
+                    body = "Once you save a job, this screen starts surfacing billed totals, open follow-ups, and weekly momentum.",
                 )
             }
         } else {
@@ -108,7 +107,7 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun HeroCard(
+private fun RevenueHero(
     snapshot: DashboardSnapshot,
     currency: CurrencyOption,
 ) {
@@ -116,131 +115,142 @@ private fun HeroCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = Brush.linearGradient(
+                brush = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.tertiary,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
+                        MaterialTheme.colorScheme.secondary,
                     ),
                 ),
-                shape = RoundedCornerShape(30.dp),
+                shape = RoundedCornerShape(32.dp),
             )
             .padding(22.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
-                text = "This week billed",
-                color = Color.White.copy(alpha = 0.88f),
+                text = "THIS WEEK",
                 style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.78f),
             )
             Text(
                 text = formatCurrency(snapshot.weekRevenue, currency),
-                color = Color.White,
                 style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
             )
             Text(
-                text = "Invoice-ready total across saved jobs, shown in ${currency.code}.",
-                color = Color.White.copy(alpha = 0.88f),
+                text = "Week-to-date billed work, with unpaid pressure and margin visible below.",
                 style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.9f),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HeroPill(label = "Profit", value = formatCurrency(snapshot.weekProfit, currency))
-                HeroPill(label = "Follow-ups", value = "${snapshot.followUpCount} open")
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HeroTag(label = "Profit ${formatCurrency(snapshot.weekProfit, currency)}")
+                HeroTag(label = "${snapshot.followUpCount} follow-ups")
+            }
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White.copy(alpha = 0.14f),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    HeroMetric(label = "Outstanding", value = formatCurrency(snapshot.unpaidAmount, currency))
+                    HeroMetric(label = "Top client", value = snapshot.topClient)
+                    HeroMetric(label = "Hours", value = formatHours(snapshot.weekHours))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun HeroPill(
+private fun HeroTag(
     label: String,
-    value: String,
 ) {
     Surface(
         color = Color.White.copy(alpha = 0.16f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(999.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-        ) {
-            Text(
-                text = label,
-                color = Color.White.copy(alpha = 0.74f),
-                style = MaterialTheme.typography.labelSmall,
-            )
-            Text(text = value, color = Color.White, style = MaterialTheme.typography.titleSmall)
-        }
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+        )
     }
 }
 
 @Composable
-private fun MetricsGrid(
+private fun HeroMetric(
+    label: String,
+    value: String,
+) {
+    Column(
+        modifier = Modifier.width(92.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.7f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            color = Color.White,
+        )
+    }
+}
+
+@Composable
+private fun PulseBoard(
     snapshot: DashboardSnapshot,
     currency: CurrencyOption,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricTile(
+            PulseTile(
                 label = "30-day billed",
                 value = formatCurrency(snapshot.monthRevenue, currency),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                detail = "Recent volume across every saved job.",
+                containerColor = MaterialTheme.colorScheme.surface,
             )
-            MetricTile(
+            PulseTile(
                 label = "Average job",
                 value = formatCurrency(snapshot.averageJobValue, currency),
-                containerColor = MaterialTheme.colorScheme.surface,
+                detail = "Useful when you quote similar work.",
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricTile(
-                label = "Outstanding",
-                value = formatCurrency(snapshot.unpaidAmount, currency),
+            PulseTile(
+                label = "Week costs",
+                value = formatCurrency(snapshot.weekCosts, currency),
+                detail = "Materials and travel eating into margin.",
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
             )
-            MetricTile(
-                label = "Hours this week",
-                value = formatHours(snapshot.weekHours),
-                containerColor = MaterialTheme.colorScheme.surface,
+            PulseTile(
+                label = "Open pressure",
+                value = "${snapshot.followUpCount} jobs",
+                detail = "Outstanding invoices and quotes still in play.",
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             )
-        }
-        Card(
-            shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(text = "Top customer", style = MaterialTheme.typography.labelLarge)
-                    Text(text = snapshot.topClient, style = MaterialTheme.typography.titleMedium)
-                }
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                ) {
-                    Text(
-                        text = "Costs ${formatCurrency(snapshot.weekCosts, currency)}",
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                }
-            }
         }
     }
 }
 
 @Composable
-private fun RowScope.MetricTile(
+private fun RowScope.PulseTile(
     label: String,
     value: String,
+    detail: String,
     containerColor: Color,
 ) {
     Card(
         modifier = Modifier.weight(1f),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Column(
@@ -253,6 +263,11 @@ private fun RowScope.MetricTile(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(text = value, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -264,22 +279,19 @@ private fun UpgradePromptCard(
     onOpenPro: () -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(text = "Free plan status", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Starter plan runway", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "You have logged $jobCount jobs. $remainingFreeEntries free jobs remain before Pro is required.",
+                text = "You have logged $jobCount jobs. $remainingFreeEntries free jobs remain before unlimited logging moves behind Pro.",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Button(
-                onClick = onOpenPro,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
-            ) {
+            Button(onClick = onOpenPro) {
                 Text("See Pro pricing")
             }
         }
@@ -294,17 +306,22 @@ private fun TrendCard(
     onOpenPro: () -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(text = "4-week billed trend", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Four-week momentum", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "A compact revenue view so you can tell whether the pipeline is tightening or climbing.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (locked) {
                 Text(
-                    text = "Upgrade to Pro to unlock multi-week revenue trends and outstanding invoice analytics.",
+                    text = "Unlock trend history and deeper outstanding analytics with Pro.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Button(onClick = onOpenPro) {
@@ -322,18 +339,21 @@ private fun TrendChart(
     snapshot: DashboardSnapshot,
     currency: CurrencyOption,
 ) {
-    val maxValue = snapshot.trend.maxOfOrNull { it.value.coerceAtLeast(0.0) }?.takeIf { it > 0 } ?: 1.0
+    val maxValue = snapshot.trend.maxOfOrNull { it.value.coerceAtLeast(0.0) }?.takeIf { it > 0.0 } ?: 1.0
+    val barColors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.secondary,
+    )
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp),
+            .height(188.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Bottom,
     ) {
         snapshot.trend.forEach { week ->
             val ratio = (week.value / maxValue).toFloat().coerceIn(0.12f, 1f)
-            val barColor = MaterialTheme.colorScheme.secondary
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -349,8 +369,10 @@ private fun TrendChart(
                         .height((120 * ratio).dp),
                 ) {
                     drawRoundRect(
-                        color = barColor,
-                        cornerRadius = CornerRadius(22f, 22f),
+                        brush = Brush.verticalGradient(
+                            colors = barColors,
+                        ),
+                        cornerRadius = CornerRadius(26f, 26f),
                     )
                 }
                 Text(text = week.label, style = MaterialTheme.typography.labelMedium)
@@ -365,32 +387,43 @@ private fun RecentJobRow(
     currency: CurrencyOption,
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(text = job.jobName, style = MaterialTheme.typography.titleSmall)
-                    Text(text = job.clientName, style = MaterialTheme.typography.bodySmall)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(text = job.jobName, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = job.clientName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 InvoiceStatusBadge(status = job.invoiceStatus)
             }
+            Text(
+                text = formatCurrency(job.invoiceTotal, currency),
+                style = MaterialTheme.typography.titleLarge,
+            )
             Text(
                 text = "${formatShortDate(job.date)}  •  ${job.timeWindowLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Invoice ${formatCurrency(job.invoiceTotal, currency)}  •  Profit ${formatCurrency(job.estimatedProfit, currency)}",
-                style = MaterialTheme.typography.bodySmall,
+                text = "Estimated profit ${formatCurrency(job.estimatedProfit, currency)}",
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
@@ -417,7 +450,7 @@ private fun InfoCard(
     body: String,
 ) {
     Card(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(

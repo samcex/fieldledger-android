@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -74,9 +75,7 @@ fun FieldLedgerApp(
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 containerColor = Color.Transparent,
-                snackbarHost = {
-                    SnackbarHost(hostState = snackbarHostState)
-                },
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             ) { innerPadding ->
                 OnboardingScreen(
                     modifier = Modifier.padding(bottom = 8.dp),
@@ -109,13 +108,11 @@ fun FieldLedgerApp(
                         onSelect = viewModel::selectTab,
                     )
                 },
-                snackbarHost = {
-                    SnackbarHost(hostState = snackbarHostState)
-                },
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             ) { innerPadding ->
                 val contentPadding = PaddingValues(
                     start = 20.dp,
-                    top = innerPadding.calculateTopPadding() + 8.dp,
+                    top = innerPadding.calculateTopPadding() + 6.dp,
                     end = 20.dp,
                     bottom = innerPadding.calculateBottomPadding() + 8.dp,
                 )
@@ -200,12 +197,40 @@ private fun AppBackdrop(
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
                         MaterialTheme.colorScheme.background,
                     ),
                 ),
             ),
     ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(120f, 120f),
+                        radius = 680f,
+                    ),
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(900f, 0f),
+                        radius = 920f,
+                    ),
+                ),
+        )
         content()
     }
 }
@@ -216,46 +241,69 @@ private fun AppChrome(
     currency: CurrencyOption,
     isPro: Boolean,
 ) {
-    val header = when (selectedTab) {
-        FieldLedgerTab.Dashboard -> "Run the business, not the paperwork"
-        FieldLedgerTab.AddJob -> "Capture today while the details are fresh"
-        FieldLedgerTab.History -> "Track the pipeline and chase open money"
-        FieldLedgerTab.Pro -> "Monetize the workflow with recurring value"
-        FieldLedgerTab.Settings -> "Tune how money and formatting show up"
-    }
+    val meta = tabMeta(selectedTab)
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         shape = RoundedCornerShape(30.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        tonalElevation = 10.dp,
-        shadowElevation = 12.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        tonalElevation = 8.dp,
+        shadowElevation = 10.dp,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(text = "FieldLedger", style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "FIELDLEDGER",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(text = meta.title, style = MaterialTheme.typography.titleLarge)
+                }
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                ) {
+                    Text(
+                        text = meta.label,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
             Text(
-                text = header,
+                text = meta.subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ChromeChip(
-                    label = if (isPro) "Pro active" else "Free plan",
+                ChromePill(
+                    label = if (isPro) "Pro unlocked" else "Starter plan",
                     containerColor = if (isPro) {
-                        MaterialTheme.colorScheme.secondaryContainer
+                        MaterialTheme.colorScheme.primaryContainer
                     } else {
                         MaterialTheme.colorScheme.tertiaryContainer
                     },
                 )
-                ChromeChip(
-                    label = "Currency ${currency.code}",
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ChromePill(
+                    label = currency.code,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 )
             }
         }
@@ -263,13 +311,13 @@ private fun AppChrome(
 }
 
 @Composable
-private fun ChromeChip(
+private fun ChromePill(
     label: String,
     containerColor: Color,
 ) {
     Surface(
-        shape = RoundedCornerShape(999.dp),
         color = containerColor,
+        shape = RoundedCornerShape(999.dp),
     ) {
         Text(
             text = label,
@@ -298,12 +346,12 @@ private fun FieldLedgerBottomBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
             shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
             tonalElevation = 10.dp,
             shadowElevation = 14.dp,
         ) {
@@ -315,7 +363,12 @@ private fun FieldLedgerBottomBar(
                     NavigationBarItem(
                         selected = item.tab == selectedTab,
                         onClick = { onSelect(item.tab) },
+                        alwaysShowLabel = false,
                         colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                         ),
                         icon = {
@@ -340,6 +393,44 @@ private data class BottomBarItem(
     val label: String,
     val icon: ImageVector,
 )
+
+private data class TabMeta(
+    val label: String,
+    val title: String,
+    val subtitle: String,
+)
+
+private fun tabMeta(selectedTab: FieldLedgerTab): TabMeta = when (selectedTab) {
+    FieldLedgerTab.Dashboard -> TabMeta(
+        label = "Overview",
+        title = "Money, pipeline, and pressure points",
+        subtitle = "A tighter operating view for what needs attention next.",
+    )
+
+    FieldLedgerTab.AddJob -> TabMeta(
+        label = "Capture",
+        title = "Turn field notes into invoice-ready work",
+        subtitle = "Keep the important numbers visible while you log the job.",
+    )
+
+    FieldLedgerTab.History -> TabMeta(
+        label = "Jobs",
+        title = "See what is paid, open, or going cold",
+        subtitle = "Outstanding work stays at the top so follow-ups take less effort.",
+    )
+
+    FieldLedgerTab.Pro -> TabMeta(
+        label = "Pro",
+        title = "Charge for admin relief, not vague features",
+        subtitle = "Subscriptions only make sense if the workflow keeps saving real time.",
+    )
+
+    FieldLedgerTab.Settings -> TabMeta(
+        label = "Settings",
+        title = "Format the app for the way you bill",
+        subtitle = "Currency and money presentation should feel local, not generic.",
+    )
+}
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

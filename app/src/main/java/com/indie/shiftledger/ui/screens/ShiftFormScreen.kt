@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,35 +55,46 @@ fun JobFormScreen(
     ) {
         item {
             Card(
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                shape = RoundedCornerShape(32.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Text(text = "Quick job capture", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "Draft snapshot", style = MaterialTheme.typography.titleLarge)
                     Text(
-                        text = "Log the work now, finish the invoice later. Date uses YYYY-MM-DD and time uses HH:MM.",
+                        text = "Keep the numbers visible while you capture the job. Date format is YYYY-MM-DD and time format is HH:MM.",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text(
-                        text = "All money fields use ${currency.displayLabel}. Dictation works well in the work summary field when your hands are busy.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(999.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
-                    ) {
-                        Text(
-                            text = "Current currency ${currency.code}",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.labelLarge,
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SummaryPill(label = "Currency ${currency.code}")
+                        SummaryPill(label = if (billing.isPro) "Pro active" else "$remainingFreeEntries free left")
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DraftMetric(
+                            label = "Invoice",
+                            value = formatCurrency(preview.invoiceTotal, currency),
+                        )
+                        DraftMetric(
+                            label = "Profit",
+                            value = formatCurrency(preview.estimatedProfit, currency),
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DraftMetric(
+                            label = "Hours",
+                            value = formatHours(preview.hours),
+                        )
+                        DraftMetric(
+                            label = "Stage",
+                            value = draft.status.label,
                         )
                     }
                     if (!billing.isPro) {
                         Text(
-                            text = "$jobCount of 15 free jobs used. $remainingFreeEntries remaining.",
+                            text = "$jobCount of 15 starter jobs used.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -93,8 +105,8 @@ fun JobFormScreen(
 
         item {
             SectionCard(
-                title = "Client and site",
-                subtitle = "Capture who the work was for and where it happened.",
+                title = "1. Work details",
+                subtitle = "The customer, the job, and the notes you will care about later.",
             ) {
                 Field(
                     label = "Customer",
@@ -122,8 +134,8 @@ fun JobFormScreen(
 
         item {
             SectionCard(
-                title = "Schedule",
-                subtitle = "Keep the date and time format tight so export stays clean.",
+                title = "2. Time and rate",
+                subtitle = "Set the service window and the labor rate that drives the draft total.",
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Field(
@@ -159,8 +171,8 @@ fun JobFormScreen(
 
         item {
             SectionCard(
-                title = "Pricing and costs",
-                subtitle = "Separate what you bill from what you spend to keep profit visible.",
+                title = "3. Billable items",
+                subtitle = "Separate what the customer sees from what the job actually costs you.",
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Field(
@@ -205,9 +217,21 @@ fun JobFormScreen(
 
         item {
             SectionCard(
-                title = "Invoice follow-up",
-                subtitle = "Optional due dates and reminders keep unpaid jobs from going cold.",
+                title = "4. Follow-up",
+                subtitle = "Keep the invoice moving with a due date, reminder date, and pipeline status.",
             ) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    InvoiceStatus.values().forEach { status ->
+                        FilterChip(
+                            selected = draft.status == status,
+                            onClick = { onDraftChange { it.copy(status = status) } },
+                            label = { Text(status.label) },
+                        )
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Field(
                         modifier = Modifier.weight(1f),
@@ -232,63 +256,79 @@ fun JobFormScreen(
         }
 
         item {
-            SectionCard(
-                title = "Invoice stage",
-                subtitle = "Use status to keep the pipeline honest.",
-            ) {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    InvoiceStatus.values().forEach { status ->
-                        FilterChip(
-                            selected = draft.status == status,
-                            onClick = { onDraftChange { it.copy(status = status) } },
-                            label = { Text(status.label) },
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
             Card(
-                shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             ) {
                 Column(
                     modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(text = "Live preview", style = MaterialTheme.typography.titleMedium)
-                    Text(text = "Hours: ${formatHours(preview.hours)}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Labor total: ${formatCurrency(preview.laborTotal, currency)}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Invoice total: ${formatCurrency(preview.invoiceTotal, currency)}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Estimated costs: ${formatCurrency(preview.totalCosts, currency)}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Estimated profit: ${formatCurrency(preview.estimatedProfit, currency)}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Due date: ${preview.dueDateText.ifBlank { "Not set" }}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Reminder date: ${preview.reminderDateText.ifBlank { "Not set" }}", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "Stage: ${draft.status.label}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Ready to save", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "Invoice ${formatCurrency(preview.invoiceTotal, currency)}  •  Costs ${formatCurrency(preview.totalCosts, currency)}  •  Profit ${formatCurrency(preview.estimatedProfit, currency)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Due ${preview.dueDateText.ifBlank { "not set" }}  •  Reminder ${preview.reminderDateText.ifBlank { "not set" }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (limitReached) {
+                        Text(
+                            text = "The starter plan limit is reached. Move to Pro to keep logging jobs.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
+                            Text("Unlock Pro")
+                        }
+                    } else {
+                        Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
+                            Text("Save job")
+                        }
+                    }
                 }
             }
         }
+    }
+}
 
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (limitReached) {
-                    Text(
-                        text = "Free logging limit reached. Upgrade to Pro to keep adding jobs.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Button(onClick = onOpenPro) {
-                        Text("Unlock Pro")
-                    }
-                } else {
-                    Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
-                        Text("Save job")
-                    }
-                }
-            }
+@Composable
+private fun SummaryPill(
+    label: String,
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
+}
+
+@Composable
+private fun RowScope.DraftMetric(
+    label: String,
+    value: String,
+) {
+    Surface(
+        modifier = Modifier.weight(1f),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(text = value, style = MaterialTheme.typography.titleSmall)
         }
     }
 }
@@ -300,7 +340,7 @@ private fun SectionCard(
     content: @Composable () -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
         Column(
@@ -337,6 +377,6 @@ private fun Field(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         minLines = minLines,
         singleLine = minLines == 1,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
     )
 }
