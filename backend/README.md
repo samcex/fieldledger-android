@@ -35,10 +35,8 @@ Open `http://localhost:8787` after the backend starts to load the web app.
 Optional preview flags:
 
 - `FIELDLEDGER_WEB_FORCE_PRO=true` unlocks Pro-only web features for internal testing
-- `FIELDLEDGER_WEB_YEARLY_CHECKOUT_URL=https://...` enables the yearly plan button
-- `FIELDLEDGER_WEB_MONTHLY_CHECKOUT_URL=https://...` enables the monthly plan button
 
-The current web paywall is a preview shell. Real web subscription verification still needs a dedicated web billing flow.
+The production web payment flow now targets Netlify Functions plus Stripe. The local Express server still serves the web app for preview, but Stripe checkout itself is intended to run from the Netlify deployment.
 
 ## Android App Configuration
 

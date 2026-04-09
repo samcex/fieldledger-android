@@ -1,9 +1,33 @@
 [build]
   publish = "webapp"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 [[redirects]]
   from = "/api/web-config"
-  to = "/api/web-config.json"
+  to = "/.netlify/functions/web-config"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe/create-checkout-session"
+  to = "/.netlify/functions/stripe-create-checkout-session"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe/checkout-status"
+  to = "/.netlify/functions/stripe-checkout-status"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe/billing-status"
+  to = "/.netlify/functions/stripe-billing-status"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe/create-portal-session"
+  to = "/.netlify/functions/stripe-create-portal-session"
   status = 200
 
 [[redirects]]
@@ -28,11 +52,6 @@
 
 [[headers]]
   for = "/manifest.webmanifest"
-  [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
-
-[[headers]]
-  for = "/api/web-config.json"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 

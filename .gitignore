@@ -2,6 +2,7 @@
 .kotlin/
 .idea/
 *.iml
+node_modules/
 local.properties
 build/
 captures/

@@ -561,17 +561,23 @@ function getRemainingFreeEntries(jobCount) {
 
 function createBillingState(config = {}) {
   const forcePro = Boolean(config.forcePro);
+  const checkoutEnabled = Boolean(config.checkoutEnabled);
+  const portalEnabled = Boolean(config.portalEnabled);
   return {
     isLoading: false,
-    isConnected: false,
+    isConnected: checkoutEnabled || forcePro,
     isPro: forcePro,
     offers: config.offers?.length ? config.offers : FALLBACK_OFFERS,
     statusMessage: forcePro
       ? "Web preview is running with Pro unlocked."
-      : "Web checkout is not configured yet. The paywall is shown for parity with Android.",
+      : checkoutEnabled
+        ? "Choose a plan to start Stripe Checkout."
+        : "Stripe checkout is not configured yet on this deploy.",
     verificationSource: forcePro ? "web-preview-config" : null,
     verifiedExpiryTime: null,
-    isVerificationConfigured: forcePro,
+    isVerificationConfigured: checkoutEnabled || forcePro,
+    checkoutEnabled,
+    portalEnabled,
   };
 }
 

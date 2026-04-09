@@ -34,6 +34,7 @@ function createInstallationId() {
 function defaultSettings() {
   return {
     installationId: createInstallationId(),
+    billingCustomerId: null,
     currencyCode: "USD",
     onboardingComplete: false,
     themeMode: "light",
@@ -50,6 +51,7 @@ function loadSettings() {
     ...fallback,
     ...parsed,
     installationId: parsed?.installationId || fallback.installationId,
+    billingCustomerId: parsed?.billingCustomerId || null,
     themeMode: getThemeMode(parsed?.themeMode).storageValue,
     logoDataUrl: parsed?.logoDataUrl || null,
   };

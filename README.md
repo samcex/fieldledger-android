@@ -77,10 +77,17 @@ Then open `http://localhost:8787`.
 The repository now includes [`netlify.toml`](/root/shiftledger-android/netlify.toml) for the web app.
 
 - Publish directory: `webapp`
-- No build step required
+- Functions directory: `netlify/functions`
+- Netlify installs the root [`package.json`](/root/shiftledger-android/package.json) for Stripe + Netlify Functions
 - SPA routes are redirected to `index.html`
-- `/api/web-config` is served from the static fallback at [`webapp/api/web-config.json`](/root/shiftledger-android/webapp/api/web-config.json) when deployed on Netlify
-- The web app is deployable as a static site on Netlify without the Node backend
+- `/api/web-config` and `/api/stripe/*` are served by Netlify Functions in production
+
+Set these Netlify environment variables to enable web payments:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_MONTHLY_PRICE_ID`
+- `STRIPE_YEARLY_PRICE_ID`
+- `FIELDLEDGER_WEB_FORCE_PRO` optional preview override
 
 Outputs:
 

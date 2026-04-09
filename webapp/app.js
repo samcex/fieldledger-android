@@ -102,9 +102,63 @@ function persistSettings() {
   saveSettings(state.settings);
 }
 
+function setBillingCustomerId(customerId) {
+  state.settings = {
+    ...state.settings,
+    billingCustomerId: customerId || null,
+  };
+  persistSettings();
+}
+
 function persistJobs() {
   saveJobs(state.jobs);
   reminderEngine.sync(state.jobs);
+}
+
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || data.message || "Request failed.");
+  }
+  return data;
+}
+
+function billingStateFromSnapshot(snapshot = {}, fallbackMessage = null) {
+  const baseState = createBillingState(state.serverConfig);
+  return {
+    ...baseState,
+    isLoading: false,
+    isConnected: baseState.checkoutEnabled || baseState.isConnected,
+    isPro: Boolean(snapshot.active ?? baseState.isPro),
+    verificationSource: snapshot.source || baseState.verificationSource,
+    verifiedExpiryTime: snapshot.currentPeriodEnd || null,
+    statusMessage:
+      snapshot.message ||
+      fallbackMessage ||
+      (Boolean(snapshot.active) ? "Pro verified by Stripe." : baseState.statusMessage),
+  };
+}
+
+function normalizeUrlState() {
+  const url = new URL(window.location.href);
+  const requestedTab = url.searchParams.get("tab");
+  if (requestedTab && Object.values(TABS).includes(requestedTab)) {
+    state.selectedTab = requestedTab;
+  }
+  return url;
+}
+
+function clearCheckoutQueryState(url) {
+  url.searchParams.delete("checkout");
+  url.searchParams.delete("session_id");
+  window.history.replaceState({}, "", url.toString());
 }
 
 function queueRender() {
@@ -372,7 +426,9 @@ function handleContinueOnboarding() {
 async function loadServerConfig() {
   const fallbackConfig = {
     forcePro: false,
+    checkoutEnabled: false,
     offers: FALLBACK_OFFERS,
+    portalEnabled: false,
   };
 
   try {
@@ -386,6 +442,152 @@ async function loadServerConfig() {
   }
   state.billing = createBillingState(state.serverConfig);
   queueRender();
+}
+
+async function refreshBillingStatus(options = {}) {
+  const { silent = false } = options;
+
+  if (state.serverConfig.forcePro) {
+    state.billing = createBillingState(state.serverConfig);
+    queueRender();
+    return true;
+  }
+
+  if (!state.settings.billingCustomerId) {
+    state.billing = createBillingState(state.serverConfig);
+    queueRender();
+    if (!silent && state.billing.checkoutEnabled) {
+      showToast("No Stripe subscription is linked to this device yet.");
+    }
+    return false;
+  }
+
+  state.billing = {
+    ...state.billing,
+    isLoading: true,
+    statusMessage: "Checking Stripe subscription status...",
+  };
+  queueRender();
+
+  try {
+    const snapshot = await postJson("/api/stripe/billing-status", {
+      customerId: state.settings.billingCustomerId,
+      installationId: state.settings.installationId,
+    });
+    state.billing = billingStateFromSnapshot(snapshot);
+    queueRender();
+    if (!silent) {
+      showToast(snapshot.active ? "Stripe subscription confirmed." : snapshot.message || "No active Stripe subscription found.");
+    }
+    return Boolean(snapshot.active);
+  } catch (caught) {
+    state.billing = billingStateFromSnapshot({}, caught instanceof Error ? caught.message : "Could not load Stripe billing status.");
+    queueRender();
+    if (!silent) {
+      showToast(state.billing.statusMessage);
+    }
+    return false;
+  }
+}
+
+async function verifyCheckoutSession(sessionId) {
+  state.billing = {
+    ...state.billing,
+    isLoading: true,
+    statusMessage: "Verifying Stripe checkout...",
+  };
+  queueRender();
+
+  try {
+    const snapshot = await postJson("/api/stripe/checkout-status", {
+      installationId: state.settings.installationId,
+      sessionId,
+    });
+    if (snapshot.customerId) {
+      setBillingCustomerId(snapshot.customerId);
+    }
+    state.billing = billingStateFromSnapshot(snapshot);
+    queueRender();
+    showToast(snapshot.active ? "Payment confirmed. Pro is active." : snapshot.message || "Stripe checkout finished, but Pro is not active yet.");
+    return Boolean(snapshot.active);
+  } catch (caught) {
+    state.billing = billingStateFromSnapshot({}, caught instanceof Error ? caught.message : "Could not verify the Stripe checkout.");
+    queueRender();
+    showToast(state.billing.statusMessage);
+    return false;
+  }
+}
+
+async function startCheckout(productId) {
+  if (!state.billing.checkoutEnabled) {
+    showToast("Stripe checkout is not configured on this deploy yet.");
+    return;
+  }
+
+  state.billing = {
+    ...state.billing,
+    isLoading: true,
+    statusMessage: "Opening Stripe Checkout...",
+  };
+  queueRender();
+
+  try {
+    const payload = await postJson("/api/stripe/create-checkout-session", {
+      installationId: state.settings.installationId,
+      productId,
+    });
+    if (!payload.url) {
+      throw new Error("Stripe did not return a checkout URL.");
+    }
+    window.location.assign(payload.url);
+  } catch (caught) {
+    state.billing = billingStateFromSnapshot({}, caught instanceof Error ? caught.message : "Could not start Stripe Checkout.");
+    queueRender();
+    showToast(state.billing.statusMessage);
+  }
+}
+
+async function openBillingPortal() {
+  if (!state.settings.billingCustomerId) {
+    showToast("No Stripe billing customer is linked to this device.");
+    return;
+  }
+
+  try {
+    const payload = await postJson("/api/stripe/create-portal-session", {
+      customerId: state.settings.billingCustomerId,
+      returnUrl: `${window.location.origin}/?tab=Pro`,
+    });
+    if (!payload.url) {
+      throw new Error("Stripe did not return a billing portal URL.");
+    }
+    window.location.assign(payload.url);
+  } catch (caught) {
+    showToast(caught instanceof Error ? caught.message : "Could not open the Stripe billing portal.");
+  }
+}
+
+async function restoreBillingFromUrl() {
+  const url = normalizeUrlState();
+  const checkoutState = url.searchParams.get("checkout");
+  const sessionId = url.searchParams.get("session_id");
+
+  if (checkoutState === "cancel") {
+    state.selectedTab = TABS.PRO;
+    clearCheckoutQueryState(url);
+    showToast("Checkout canceled.");
+    await refreshBillingStatus({ silent: true });
+    return;
+  }
+
+  if (checkoutState === "success" && sessionId) {
+    state.selectedTab = TABS.PRO;
+    await verifyCheckoutSession(sessionId);
+    clearCheckoutQueryState(url);
+    return;
+  }
+
+  await refreshBillingStatus({ silent: true });
 }
 
 function applyTheme() {
@@ -1005,7 +1207,7 @@ function renderHistoryJobCard(job) {
 }
 
 function renderOfferCard(offer) {
-  const purchaseEnabled = Boolean(offer.purchaseUrl) && !state.billing.isPro;
+  const purchaseEnabled = Boolean(offer.checkoutEnabled ?? state.billing.checkoutEnabled) && !state.billing.isPro;
   const highlighted = offer.productId === "field_ledger_pro_yearly";
   return `
     <article class="panel offer-card ${highlighted ? "offer-card-highlighted" : ""}">
@@ -1031,8 +1233,8 @@ function renderOfferCard(offer) {
         state.billing.isPro
           ? "Pro already active"
           : purchaseEnabled
-            ? "Open web checkout"
-            : "Waiting for checkout setup",
+            ? "Open Stripe Checkout"
+            : "Waiting for Stripe setup",
         `class="button button-primary" data-action="purchase-offer" data-product-id="${offer.productId}" ${purchaseEnabled ? "" : "disabled"}`,
       )}
     </article>
@@ -1069,7 +1271,13 @@ function renderPaywallScreen() {
         <div class="section-header">
           <div>
             <h3>Launch checklist</h3>
-            <p>${escapeHtml(state.serverConfig.forcePro ? "Preview mode is forcing Pro open for testing." : "Set FIELDLEDGER_WEB_FORCE_PRO=true if you want to preview unlocked web features before wiring real billing.")}</p>
+            <p>${escapeHtml(
+              state.serverConfig.forcePro
+                ? "Preview mode is forcing Pro open for testing."
+                : state.billing.checkoutEnabled
+                  ? "Stripe checkout is configured. Complete a checkout on this device, then use Refresh billing status if needed."
+                  : "Set STRIPE_SECRET_KEY, STRIPE_MONTHLY_PRICE_ID, and STRIPE_YEARLY_PRICE_ID in Netlify to enable payment.",
+            )}</p>
           </div>
         </div>
         ${
@@ -1077,7 +1285,19 @@ function renderPaywallScreen() {
             ? `<p class="subtle-copy">Verification source: ${escapeHtml(state.billing.verificationSource)}</p>`
             : ""
         }
-        ${renderButton("Refresh billing config", 'class="button button-secondary" data-action="refresh-billing"')}
+        ${
+          state.billing.verifiedExpiryTime
+            ? `<p class="subtle-copy">Current period ends ${escapeHtml(new Date(state.billing.verifiedExpiryTime).toLocaleDateString())}</p>`
+            : ""
+        }
+        <div class="action-row">
+          ${renderButton("Refresh billing status", 'class="button button-secondary" data-action="refresh-billing"')}
+          ${
+            state.billing.isPro && state.billing.portalEnabled && state.settings.billingCustomerId
+              ? renderButton("Manage billing", 'class="button button-primary" data-action="open-customer-portal"')
+              : ""
+          }
+        </div>
       </article>
     </section>
   `;
@@ -1431,16 +1651,15 @@ function handleActionClick(action, element) {
       handleExport(jobId);
       break;
     case "refresh-billing":
-      loadServerConfig();
+      loadServerConfig().then(() => refreshBillingStatus());
       break;
     case "purchase-offer": {
-      const offer = (state.billing.offers || []).find((item) => item.productId === element.dataset.productId);
-      if (offer?.purchaseUrl) {
-        window.open(offer.purchaseUrl, "_blank", "noopener");
-        showToast("Checkout opened in a new tab.");
-      }
+      startCheckout(element.dataset.productId);
       break;
     }
+    case "open-customer-portal":
+      openBillingPortal();
+      break;
     case "choose-logo":
       logoInput.click();
       break;
@@ -1544,6 +1763,7 @@ window.addEventListener("focus", () => {
 async function start() {
   registerServiceWorker();
   await loadServerConfig();
+  await restoreBillingFromUrl();
   reminderEngine.sync(state.jobs);
   render();
 }

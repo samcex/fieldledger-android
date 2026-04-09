@@ -1,10 +1,9 @@
-const CACHE_NAME = "fieldledger-web-v2";
+const CACHE_NAME = "fieldledger-web-v4";
 const APP_ASSETS = [
   "/",
   "/index.html",
   "/styles.css",
   "/app.js",
-  "/api/web-config.json",
   "/manifest.webmanifest",
   "/assets/icon.svg",
   "/lib/logic.js",
