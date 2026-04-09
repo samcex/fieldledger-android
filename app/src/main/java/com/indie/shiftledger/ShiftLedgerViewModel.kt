@@ -16,6 +16,7 @@ import com.indie.shiftledger.model.DisplayOffer
 import com.indie.shiftledger.model.JobDraft
 import com.indie.shiftledger.model.JobRecord
 import com.indie.shiftledger.model.MonetizationPlan
+import com.indie.shiftledger.model.ThemeMode
 import com.indie.shiftledger.model.validate
 import com.indie.shiftledger.notifications.ReminderScheduler
 import java.time.LocalDate
@@ -42,6 +43,7 @@ class FieldLedgerViewModel(
         billingRepository.uiState,
         settingsRepository.currency,
         settingsRepository.onboardingComplete,
+        settingsRepository.themeMode,
         selectedTab,
         draft,
         snackMessage,
@@ -51,15 +53,17 @@ class FieldLedgerViewModel(
         val billing = values[1] as BillingUiState
         val currency = values[2] as CurrencyOption
         val onboardingComplete = values[3] as Boolean
-        val tab = values[4] as FieldLedgerTab
-        val currentDraft = values[5] as JobDraft
-        val message = values[6] as String?
+        val themeMode = values[4] as ThemeMode
+        val tab = values[5] as FieldLedgerTab
+        val currentDraft = values[6] as JobDraft
+        val message = values[7] as String?
 
         FieldLedgerUiState(
             jobs = jobs,
             dashboard = DashboardSnapshot.fromJobs(jobs),
             billing = billing,
             currency = currency,
+            themeMode = themeMode,
             showOnboarding = !onboardingComplete,
             selectedTab = tab,
             draft = currentDraft,
@@ -89,6 +93,11 @@ class FieldLedgerViewModel(
     fun updateCurrency(currency: CurrencyOption) {
         settingsRepository.updateCurrency(currency)
         snackMessage.value = "Currency changed to ${currency.code}."
+    }
+
+    fun updateThemeMode(themeMode: ThemeMode) {
+        settingsRepository.updateThemeMode(themeMode)
+        snackMessage.value = "${themeMode.label} enabled."
     }
 
     fun showMessage(message: String) {
@@ -222,6 +231,7 @@ data class FieldLedgerUiState(
     val dashboard: DashboardSnapshot = DashboardSnapshot(),
     val billing: BillingUiState = BillingUiState(),
     val currency: CurrencyOption = CurrencyOption.USD,
+    val themeMode: ThemeMode = ThemeMode.Light,
     val showOnboarding: Boolean = true,
     val selectedTab: FieldLedgerTab = FieldLedgerTab.Dashboard,
     val draft: JobDraft = JobDraft(),

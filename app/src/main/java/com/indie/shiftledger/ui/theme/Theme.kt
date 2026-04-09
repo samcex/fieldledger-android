@@ -1,6 +1,5 @@
 package com.indie.shiftledger.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -30,36 +29,36 @@ private val LightColors = lightColorScheme(
     surfaceTint = Pine,
 )
 
-private val DarkColors = darkColorScheme(
+private val AmoledDarkColors = darkColorScheme(
     primary = MeadowGlow,
-    onPrimary = Midnight,
-    primaryContainer = Color(0xFF20372E),
+    onPrimary = AmoledBlack,
+    primaryContainer = Color(0xFF132019),
     onPrimaryContainer = MidnightText,
     secondary = EmberGlow,
-    onSecondary = Midnight,
-    secondaryContainer = Color(0xFF4B3023),
+    onSecondary = AmoledBlack,
+    secondaryContainer = Color(0xFF3C241A),
     onSecondaryContainer = MidnightText,
     tertiary = SandLight,
-    onTertiary = Midnight,
-    tertiaryContainer = Color(0xFF4C412C),
+    onTertiary = AmoledBlack,
+    tertiaryContainer = Color(0xFF403624),
     onTertiaryContainer = MidnightText,
-    background = Midnight,
+    background = AmoledBlack,
     onBackground = MidnightText,
-    surface = MidnightSurface,
+    surface = AmoledSurface,
     onSurface = MidnightText,
-    surfaceVariant = MidnightVariant,
+    surfaceVariant = AmoledVariant,
     onSurfaceVariant = MidnightMuted,
-    outline = Color(0xFF5A4D42),
+    outline = AmoledOutline,
     surfaceTint = MeadowGlow,
 )
 
 @Composable
 fun FieldLedgerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = if (darkTheme) AmoledDarkColors else LightColors,
         typography = FieldLedgerTypography,
         content = content,
     )

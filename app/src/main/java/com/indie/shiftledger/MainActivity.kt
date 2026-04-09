@@ -11,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import com.indie.shiftledger.notifications.ReminderNotifications
-import com.indie.shiftledger.ui.theme.FieldLedgerTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<FieldLedgerViewModel> {
@@ -28,9 +27,7 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermissionIfNeeded()
 
         setContent {
-            FieldLedgerTheme {
-                FieldLedgerApp(viewModel = viewModel)
-            }
+            FieldLedgerApp(viewModel = viewModel)
         }
     }
 

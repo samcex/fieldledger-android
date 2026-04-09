@@ -2,6 +2,7 @@ package com.indie.shiftledger.data
 
 import android.content.Context
 import com.indie.shiftledger.model.CurrencyOption
+import com.indie.shiftledger.model.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,9 +27,15 @@ class SettingsRepository(
     private val _onboardingComplete = MutableStateFlow(
         prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false),
     )
+    private val _themeMode = MutableStateFlow(
+        ThemeMode.fromStorageValue(
+            prefs.getString(KEY_THEME_MODE, ThemeMode.Light.storageValue),
+        ),
+    )
 
     val currency: StateFlow<CurrencyOption> = _currency.asStateFlow()
     val onboardingComplete: StateFlow<Boolean> = _onboardingComplete.asStateFlow()
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     fun updateCurrency(currency: CurrencyOption) {
         if (_currency.value == currency) return
@@ -38,6 +45,16 @@ class SettingsRepository(
             .apply()
 
         _currency.value = currency
+    }
+
+    fun updateThemeMode(themeMode: ThemeMode) {
+        if (_themeMode.value == themeMode) return
+
+        prefs.edit()
+            .putString(KEY_THEME_MODE, themeMode.storageValue)
+            .apply()
+
+        _themeMode.value = themeMode
     }
 
     fun completeOnboarding() {
@@ -55,5 +72,6 @@ class SettingsRepository(
         const val KEY_CURRENCY_CODE = "currency_code"
         const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
         const val KEY_INSTALLATION_ID = "installation_id"
+        const val KEY_THEME_MODE = "theme_mode"
     }
 }

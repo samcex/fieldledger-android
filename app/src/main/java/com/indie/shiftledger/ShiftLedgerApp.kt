@@ -54,6 +54,7 @@ import com.indie.shiftledger.ui.screens.JobFormScreen
 import com.indie.shiftledger.ui.screens.OnboardingScreen
 import com.indie.shiftledger.ui.screens.PaywallScreen
 import com.indie.shiftledger.ui.screens.SettingsScreen
+import com.indie.shiftledger.ui.theme.FieldLedgerTheme
 
 @Composable
 fun FieldLedgerApp(
@@ -70,116 +71,120 @@ fun FieldLedgerApp(
         viewModel.dismissMessage()
     }
 
-    AppBackdrop {
-        if (uiState.showOnboarding) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                containerColor = Color.Transparent,
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            ) { innerPadding ->
-                OnboardingScreen(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    contentPadding = PaddingValues(
-                        start = 20.dp,
-                        top = innerPadding.calculateTopPadding() + 20.dp,
-                        end = 20.dp,
-                        bottom = innerPadding.calculateBottomPadding() + 20.dp,
-                    ),
-                    currency = uiState.currency,
-                    onCurrencySelected = viewModel::updateCurrency,
-                    onContinue = viewModel::completeOnboarding,
-                )
-            }
-        } else {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                containerColor = Color.Transparent,
-                topBar = {
-                    AppChrome(
-                        selectedTab = uiState.selectedTab,
-                        currency = uiState.currency,
-                        isPro = uiState.billing.isPro,
-                    )
-                },
-                bottomBar = {
-                    FieldLedgerBottomBar(
-                        selectedTab = uiState.selectedTab,
-                        isPro = uiState.billing.isPro,
-                        onSelect = viewModel::selectTab,
-                    )
-                },
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            ) { innerPadding ->
-                val contentPadding = PaddingValues(
-                    start = 20.dp,
-                    top = innerPadding.calculateTopPadding() + 6.dp,
-                    end = 20.dp,
-                    bottom = innerPadding.calculateBottomPadding() + 8.dp,
-                )
-
-                when (uiState.selectedTab) {
-                    FieldLedgerTab.Dashboard -> DashboardScreen(
+    FieldLedgerTheme(darkTheme = uiState.themeMode.isDark) {
+        AppBackdrop {
+            if (uiState.showOnboarding) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    containerColor = Color.Transparent,
+                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                ) { innerPadding ->
+                    OnboardingScreen(
                         modifier = Modifier.padding(bottom = 8.dp),
-                        contentPadding = contentPadding,
-                        snapshot = uiState.dashboard,
-                        recentJobs = uiState.jobs.take(4),
-                        billing = uiState.billing,
-                        currency = uiState.currency,
-                        jobCount = uiState.jobs.size,
-                        remainingFreeEntries = uiState.remainingFreeEntries,
-                        onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
-                    )
-
-                    FieldLedgerTab.AddJob -> JobFormScreen(
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        contentPadding = contentPadding,
-                        draft = uiState.draft,
-                        billing = uiState.billing,
-                        currency = uiState.currency,
-                        jobCount = uiState.jobs.size,
-                        remainingFreeEntries = uiState.remainingFreeEntries,
-                        onDraftChange = { updater -> viewModel.updateDraft(updater) },
-                        onSave = viewModel::saveDraft,
-                        onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
-                    )
-
-                    FieldLedgerTab.History -> HistoryScreen(
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        contentPadding = contentPadding,
-                        jobs = uiState.jobs,
-                        currency = uiState.currency,
-                        onExport = { job ->
-                            runCatching {
-                                val pdfFile = invoiceExporter.export(job, uiState.currency)
-                                InvoiceShareLauncher.share(context, pdfFile)
-                            }.onFailure {
-                                viewModel.showMessage("Could not export invoice PDF.")
-                            }
-                        },
-                        onScheduleReminder = viewModel::scheduleReminderTomorrow,
-                        onClearReminder = viewModel::clearReminder,
-                        onDelete = viewModel::deleteJob,
-                    )
-
-                    FieldLedgerTab.Pro -> PaywallScreen(
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        contentPadding = contentPadding,
-                        billing = uiState.billing,
-                        resolveOffer = viewModel::proOfferByProductId,
-                        onRefresh = viewModel::refreshBilling,
-                        onPurchase = { offer ->
-                            context.findActivity()?.let { activity ->
-                                viewModel.launchPurchase(activity, offer)
-                            }
-                        },
-                    )
-
-                    FieldLedgerTab.Settings -> SettingsScreen(
-                        modifier = Modifier.padding(bottom = 8.dp),
-                        contentPadding = contentPadding,
+                        contentPadding = PaddingValues(
+                            start = 20.dp,
+                            top = innerPadding.calculateTopPadding() + 20.dp,
+                            end = 20.dp,
+                            bottom = innerPadding.calculateBottomPadding() + 20.dp,
+                        ),
                         currency = uiState.currency,
                         onCurrencySelected = viewModel::updateCurrency,
+                        onContinue = viewModel::completeOnboarding,
                     )
+                }
+            } else {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    containerColor = Color.Transparent,
+                    topBar = {
+                        AppChrome(
+                            selectedTab = uiState.selectedTab,
+                            currency = uiState.currency,
+                            isPro = uiState.billing.isPro,
+                        )
+                    },
+                    bottomBar = {
+                        FieldLedgerBottomBar(
+                            selectedTab = uiState.selectedTab,
+                            isPro = uiState.billing.isPro,
+                            onSelect = viewModel::selectTab,
+                        )
+                    },
+                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                ) { innerPadding ->
+                    val contentPadding = PaddingValues(
+                        start = 20.dp,
+                        top = innerPadding.calculateTopPadding(),
+                        end = 20.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 8.dp,
+                    )
+
+                    when (uiState.selectedTab) {
+                        FieldLedgerTab.Dashboard -> DashboardScreen(
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            contentPadding = contentPadding,
+                            snapshot = uiState.dashboard,
+                            recentJobs = uiState.jobs.take(4),
+                            billing = uiState.billing,
+                            currency = uiState.currency,
+                            jobCount = uiState.jobs.size,
+                            remainingFreeEntries = uiState.remainingFreeEntries,
+                            onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
+                        )
+
+                        FieldLedgerTab.AddJob -> JobFormScreen(
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            contentPadding = contentPadding,
+                            draft = uiState.draft,
+                            billing = uiState.billing,
+                            currency = uiState.currency,
+                            jobCount = uiState.jobs.size,
+                            remainingFreeEntries = uiState.remainingFreeEntries,
+                            onDraftChange = { updater -> viewModel.updateDraft(updater) },
+                            onSave = viewModel::saveDraft,
+                            onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
+                        )
+
+                        FieldLedgerTab.History -> HistoryScreen(
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            contentPadding = contentPadding,
+                            jobs = uiState.jobs,
+                            currency = uiState.currency,
+                            onExport = { job ->
+                                runCatching {
+                                    val pdfFile = invoiceExporter.export(job, uiState.currency)
+                                    InvoiceShareLauncher.share(context, pdfFile)
+                                }.onFailure {
+                                    viewModel.showMessage("Could not export invoice PDF.")
+                                }
+                            },
+                            onScheduleReminder = viewModel::scheduleReminderTomorrow,
+                            onClearReminder = viewModel::clearReminder,
+                            onDelete = viewModel::deleteJob,
+                        )
+
+                        FieldLedgerTab.Pro -> PaywallScreen(
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            contentPadding = contentPadding,
+                            billing = uiState.billing,
+                            resolveOffer = viewModel::proOfferByProductId,
+                            onRefresh = viewModel::refreshBilling,
+                            onPurchase = { offer ->
+                                context.findActivity()?.let { activity ->
+                                    viewModel.launchPurchase(activity, offer)
+                                }
+                            },
+                        )
+
+                        FieldLedgerTab.Settings -> SettingsScreen(
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            contentPadding = contentPadding,
+                            currency = uiState.currency,
+                            themeMode = uiState.themeMode,
+                            onCurrencySelected = viewModel::updateCurrency,
+                            onThemeModeChanged = viewModel::updateThemeMode,
+                        )
+                    }
                 }
             }
         }
@@ -247,83 +252,43 @@ private fun AppChrome(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        shape = RoundedCornerShape(30.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-        tonalElevation = 8.dp,
-        shadowElevation = 10.dp,
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        color = MaterialTheme.colorScheme.background.copy(alpha = 0.98f),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = "FIELDLEDGER",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(text = meta.title, style = MaterialTheme.typography.titleLarge)
-                }
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                ) {
-                    Text(
-                        text = meta.label,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+                Text(
+                    text = meta.title,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = "FieldLedger",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-
             Text(
-                text = meta.subtitle,
-                style = MaterialTheme.typography.bodyMedium,
+                text = buildString {
+                    append(currency.code)
+                    if (isPro) {
+                        append(" • Pro")
+                    }
+                },
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ChromePill(
-                    label = if (isPro) "Pro unlocked" else "Starter plan",
-                    containerColor = if (isPro) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.tertiaryContainer
-                    },
-                )
-                ChromePill(
-                    label = currency.code,
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                )
-            }
         }
-    }
-}
-
-@Composable
-private fun ChromePill(
-    label: String,
-    containerColor: Color,
-) {
-    Surface(
-        color = containerColor,
-        shape = RoundedCornerShape(999.dp),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
-        )
     }
 }
 
@@ -395,40 +360,28 @@ private data class BottomBarItem(
 )
 
 private data class TabMeta(
-    val label: String,
     val title: String,
-    val subtitle: String,
 )
 
 private fun tabMeta(selectedTab: FieldLedgerTab): TabMeta = when (selectedTab) {
     FieldLedgerTab.Dashboard -> TabMeta(
-        label = "Overview",
-        title = "Money, pipeline, and pressure points",
-        subtitle = "A tighter operating view for what needs attention next.",
+        title = "Overview",
     )
 
     FieldLedgerTab.AddJob -> TabMeta(
-        label = "Capture",
-        title = "Turn field notes into invoice-ready work",
-        subtitle = "Keep the important numbers visible while you log the job.",
+        title = "Capture Job",
     )
 
     FieldLedgerTab.History -> TabMeta(
-        label = "Jobs",
-        title = "See what is paid, open, or going cold",
-        subtitle = "Outstanding work stays at the top so follow-ups take less effort.",
+        title = "Jobs",
     )
 
     FieldLedgerTab.Pro -> TabMeta(
-        label = "Pro",
-        title = "Charge for admin relief, not vague features",
-        subtitle = "Subscriptions only make sense if the workflow keeps saving real time.",
+        title = "FieldLedger Pro",
     )
 
     FieldLedgerTab.Settings -> TabMeta(
-        label = "Settings",
-        title = "Format the app for the way you bill",
-        subtitle = "Currency and money presentation should feel local, not generic.",
+        title = "Settings",
     )
 }
 

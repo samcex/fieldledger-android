@@ -15,12 +15,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.indie.shiftledger.model.CurrencyOption
+import com.indie.shiftledger.model.ThemeMode
 import com.indie.shiftledger.model.formatCurrency
 
 @Composable
@@ -28,7 +30,9 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues,
     currency: CurrencyOption,
+    themeMode: ThemeMode,
     onCurrencySelected: (CurrencyOption) -> Unit,
+    onThemeModeChanged: (ThemeMode) -> Unit,
 ) {
     LazyColumn(
         modifier = modifier,
@@ -46,7 +50,7 @@ fun SettingsScreen(
                 ) {
                     Text(text = "Money formatting", style = MaterialTheme.typography.titleLarge)
                     Text(
-                        text = "Choose the currency your customers expect and the rest of the app follows it immediately.",
+                        text = "Choose the currency and color mode you want to work in. Both update instantly.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -70,6 +74,49 @@ fun SettingsScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(text = "Appearance", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = if (themeMode == ThemeMode.AmoledDark) {
+                                "AMOLED dark uses true black surfaces for OLED screens."
+                            } else {
+                                "Light mode keeps the warmer paper-style palette."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Current mode: ${themeMode.label}",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                    Switch(
+                        checked = themeMode == ThemeMode.AmoledDark,
+                        onCheckedChange = { enabled ->
+                            onThemeModeChanged(
+                                if (enabled) ThemeMode.AmoledDark else ThemeMode.Light,
+                            )
+                        },
+                    )
                 }
             }
         }
