@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,6 +42,7 @@ import com.indie.shiftledger.ui.theme.LedgerSectionHeader
 @Composable
 fun HistoryScreen(
     modifier: Modifier = Modifier,
+    listState: LazyListState,
     contentPadding: PaddingValues,
     jobs: List<JobRecord>,
     currency: CurrencyOption,
@@ -62,6 +64,7 @@ fun HistoryScreen(
 
     LazyColumn(
         modifier = modifier,
+        state = listState,
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

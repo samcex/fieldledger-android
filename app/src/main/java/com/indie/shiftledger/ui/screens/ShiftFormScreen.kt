@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -40,6 +41,7 @@ import com.indie.shiftledger.ui.theme.ledgerTextFieldColors
 @Composable
 fun JobFormScreen(
     modifier: Modifier = Modifier,
+    listState: LazyListState,
     contentPadding: PaddingValues,
     draft: JobDraft,
     billing: BillingUiState,
@@ -55,6 +57,7 @@ fun JobFormScreen(
 
     LazyColumn(
         modifier = modifier,
+        state = listState,
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

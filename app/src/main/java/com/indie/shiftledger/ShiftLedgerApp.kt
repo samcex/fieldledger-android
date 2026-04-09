@@ -18,7 +18,14 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.History
@@ -36,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -66,6 +74,22 @@ fun FieldLedgerApp(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val invoiceExporter = remember(context) { InvoicePdfExporter(context) }
+    val dashboardListState = rememberLazyListState()
+    val formListState = rememberLazyListState()
+    val historyListState = rememberLazyListState()
+    val proListState = rememberLazyListState()
+    val settingsListState = rememberLazyListState()
+    val activeListState = activeListState(
+        selectedTab = uiState.selectedTab,
+        dashboardListState = dashboardListState,
+        formListState = formListState,
+        historyListState = historyListState,
+        proListState = proListState,
+        settingsListState = settingsListState,
+    )
+    val showAppChrome by remember(activeListState) {
+        derivedStateOf { !activeListState.canScrollBackward }
+    }
 
     LaunchedEffect(uiState.snackbarMessage) {
         val message = uiState.snackbarMessage ?: return@LaunchedEffect
@@ -101,11 +125,17 @@ fun FieldLedgerApp(
                     containerColor = Color.Transparent,
                     contentWindowInsets = WindowInsets(0),
                     topBar = {
-                        AppChrome(
-                            selectedTab = uiState.selectedTab,
-                            currency = uiState.currency,
-                            isPro = uiState.billing.isPro,
-                        )
+                        AnimatedVisibility(
+                            visible = showAppChrome,
+                            enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
+                            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 }),
+                        ) {
+                            AppChrome(
+                                selectedTab = uiState.selectedTab,
+                                currency = uiState.currency,
+                                isPro = uiState.billing.isPro,
+                            )
+                        }
                     },
                     bottomBar = {
                         FieldLedgerBottomBar(
@@ -126,6 +156,7 @@ fun FieldLedgerApp(
                     when (uiState.selectedTab) {
                         FieldLedgerTab.Dashboard -> DashboardScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
+                            listState = dashboardListState,
                             contentPadding = contentPadding,
                             snapshot = uiState.dashboard,
                             recentJobs = uiState.jobs.take(4),
@@ -138,6 +169,7 @@ fun FieldLedgerApp(
 
                         FieldLedgerTab.AddJob -> JobFormScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
+                            listState = formListState,
                             contentPadding = contentPadding,
                             draft = uiState.draft,
                             billing = uiState.billing,
@@ -151,6 +183,7 @@ fun FieldLedgerApp(
 
                         FieldLedgerTab.History -> HistoryScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
+                            listState = historyListState,
                             contentPadding = contentPadding,
                             jobs = uiState.jobs,
                             currency = uiState.currency,
@@ -169,6 +202,7 @@ fun FieldLedgerApp(
 
                         FieldLedgerTab.Pro -> PaywallScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
+                            listState = proListState,
                             contentPadding = contentPadding,
                             billing = uiState.billing,
                             resolveOffer = viewModel::proOfferByProductId,
@@ -182,6 +216,7 @@ fun FieldLedgerApp(
 
                         FieldLedgerTab.Settings -> SettingsScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
+                            listState = settingsListState,
                             contentPadding = contentPadding,
                             currency = uiState.currency,
                             themeMode = uiState.themeMode,
@@ -193,6 +228,21 @@ fun FieldLedgerApp(
             }
         }
     }
+}
+
+private fun activeListState(
+    selectedTab: FieldLedgerTab,
+    dashboardListState: LazyListState,
+    formListState: LazyListState,
+    historyListState: LazyListState,
+    proListState: LazyListState,
+    settingsListState: LazyListState,
+): LazyListState = when (selectedTab) {
+    FieldLedgerTab.Dashboard -> dashboardListState
+    FieldLedgerTab.AddJob -> formListState
+    FieldLedgerTab.History -> historyListState
+    FieldLedgerTab.Pro -> proListState
+    FieldLedgerTab.Settings -> settingsListState
 }
 
 @Composable

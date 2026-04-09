@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -30,6 +31,7 @@ import com.indie.shiftledger.ui.theme.LedgerSectionHeader
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    listState: LazyListState,
     contentPadding: PaddingValues,
     currency: CurrencyOption,
     themeMode: ThemeMode,
@@ -38,6 +40,7 @@ fun SettingsScreen(
 ) {
     LazyColumn(
         modifier = modifier,
+        state = listState,
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

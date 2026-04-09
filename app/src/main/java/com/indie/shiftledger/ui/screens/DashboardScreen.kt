@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -42,6 +43,7 @@ import com.indie.shiftledger.ui.theme.LedgerSectionHeader
 @Composable
 fun DashboardScreen(
     modifier: Modifier = Modifier,
+    listState: LazyListState,
     contentPadding: PaddingValues,
     snapshot: DashboardSnapshot,
     recentJobs: List<JobRecord>,
@@ -53,6 +55,7 @@ fun DashboardScreen(
 ) {
     LazyColumn(
         modifier = modifier,
+        state = listState,
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
