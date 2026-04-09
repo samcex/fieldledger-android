@@ -1,4 +1,4 @@
-const CACHE_NAME = "fieldledger-web-v1";
+const CACHE_NAME = "fieldledger-web-v2";
 const APP_ASSETS = [
   "/",
   "/index.html",
