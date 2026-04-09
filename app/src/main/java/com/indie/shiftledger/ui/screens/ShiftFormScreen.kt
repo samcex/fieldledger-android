@@ -205,6 +205,34 @@ fun JobFormScreen(
 
         item {
             SectionCard(
+                title = "Invoice follow-up",
+                subtitle = "Optional due dates and reminders keep unpaid jobs from going cold.",
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Field(
+                        modifier = Modifier.weight(1f),
+                        label = "Due date",
+                        value = draft.dueDateText,
+                        onValueChange = { value -> onDraftChange { it.copy(dueDateText = value) } },
+                    )
+                    Field(
+                        modifier = Modifier.weight(1f),
+                        label = "Reminder date",
+                        value = draft.reminderDateText,
+                        onValueChange = { value -> onDraftChange { it.copy(reminderDateText = value) } },
+                    )
+                }
+                Field(
+                    label = "Reminder note",
+                    value = draft.reminderNote,
+                    onValueChange = { value -> onDraftChange { it.copy(reminderNote = value) } },
+                    minLines = 2,
+                )
+            }
+        }
+
+        item {
+            SectionCard(
                 title = "Invoice stage",
                 subtitle = "Use status to keep the pipeline honest.",
             ) {
@@ -238,6 +266,8 @@ fun JobFormScreen(
                     Text(text = "Invoice total: ${formatCurrency(preview.invoiceTotal, currency)}", style = MaterialTheme.typography.bodyMedium)
                     Text(text = "Estimated costs: ${formatCurrency(preview.totalCosts, currency)}", style = MaterialTheme.typography.bodyMedium)
                     Text(text = "Estimated profit: ${formatCurrency(preview.estimatedProfit, currency)}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Due date: ${preview.dueDateText.ifBlank { "Not set" }}", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = "Reminder date: ${preview.reminderDateText.ifBlank { "Not set" }}", style = MaterialTheme.typography.bodyMedium)
                     Text(text = "Stage: ${draft.status.label}", style = MaterialTheme.typography.bodyMedium)
                 }
             }

@@ -7,3 +7,9 @@ build/
 captures/
 .DS_Store
 app/build/
+backend/node_modules/
+backend/.env
+.play-signing.env
+*.jks
+*.keystore
+keystore.properties

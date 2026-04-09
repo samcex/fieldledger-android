@@ -11,8 +11,11 @@ interface JobDao {
     @Query("SELECT * FROM jobs ORDER BY epochDay DESC, startMinute DESC")
     fun observeAll(): Flow<List<JobEntity>>
 
+    @Query("SELECT * FROM jobs ORDER BY epochDay DESC, startMinute DESC")
+    suspend fun getAll(): List<JobEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(job: JobEntity)
+    suspend fun insert(job: JobEntity): Long
 
     @Query("DELETE FROM jobs WHERE id = :jobId")
     suspend fun deleteById(jobId: Long)

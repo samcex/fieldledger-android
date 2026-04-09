@@ -20,6 +20,9 @@ data class JobRecord(
     val travelCost: Double,
     val invoiceStatus: InvoiceStatus,
     val workSummary: String,
+    val paymentDueDate: LocalDate? = null,
+    val reminderDate: LocalDate? = null,
+    val reminderNote: String = "",
 ) {
     val durationMinutes: Long
         get() = max(0, java.time.Duration.between(startTime, endTime).toMinutes())
@@ -47,6 +50,14 @@ data class JobRecord(
 
     val headline: String
         get() = "$jobName for $clientName"
+
+    val hasReminder: Boolean
+        get() = invoiceStatus.isOutstanding && reminderDate != null
+
+    val reminderMessage: String
+        get() = reminderNote.ifBlank {
+            "Invoice follow-up for $clientName on $jobName."
+        }
 }
 
 enum class InvoiceStatus(

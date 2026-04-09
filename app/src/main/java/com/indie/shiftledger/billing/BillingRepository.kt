@@ -13,18 +13,27 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import com.indie.shiftledger.data.SettingsRepository
 import com.indie.shiftledger.model.DisplayOffer
 import com.indie.shiftledger.model.MonetizationPlan
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class BillingRepository(
     context: Context,
+    private val settingsRepository: SettingsRepository,
 ) : PurchasesUpdatedListener {
     private val appContext = context.applicationContext
+    private val verificationClient = BillingVerificationClient()
     private val productCache = mutableMapOf<String, ProductDetails>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var hasStarted = false
 
     private val billingClient: BillingClient = BillingClient.newBuilder(appContext)
@@ -37,7 +46,11 @@ class BillingRepository(
         .enableAutoServiceReconnection()
         .build()
 
-    private val _uiState = MutableStateFlow(BillingUiState())
+    private val _uiState = MutableStateFlow(
+        BillingUiState(
+            isVerificationConfigured = verificationClient.isConfigured,
+        ),
+    )
     val uiState: StateFlow<BillingUiState> = _uiState.asStateFlow()
 
     fun start() {
@@ -64,24 +77,8 @@ class BillingRepository(
                 return@queryPurchasesAsync
             }
 
-            val hasActivePro = purchases.any { purchase ->
-                purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    purchase.products.any { it in supportedProductIds }
-            }
-
-            purchases
-                .filter { purchase ->
-                    purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                        !purchase.isAcknowledged &&
-                        purchase.products.any { it in supportedProductIds }
-                }
-                .forEach(::acknowledgePurchase)
-
-            _uiState.update { state ->
-                state.copy(
-                    isPro = hasActivePro,
-                    statusMessage = if (hasActivePro) "Pro subscription active." else state.statusMessage,
-                )
+            scope.launch {
+                verifyPurchases(purchases)
             }
         }
     }
@@ -106,6 +103,7 @@ class BillingRepository(
             .build()
 
         val billingParams = BillingFlowParams.newBuilder()
+            .setObfuscatedAccountId(settingsRepository.installationId)
             .setProductDetailsParamsList(listOf(productParams))
             .build()
 
@@ -123,8 +121,9 @@ class BillingRepository(
     ) {
         when (billingResult.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
-                purchases.orEmpty().forEach(::handlePurchase)
-                refreshEntitlements()
+                scope.launch {
+                    verifyPurchases(purchases.orEmpty())
+                }
             }
 
             BillingClient.BillingResponseCode.USER_CANCELED -> {
@@ -143,15 +142,31 @@ class BillingRepository(
 
     fun close() {
         billingClient.endConnection()
+        scope.cancel()
     }
 
     private fun connect() {
-        _uiState.update { it.copy(isLoading = true) }
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                isVerificationConfigured = verificationClient.isConfigured,
+            )
+        }
         billingClient.startConnection(
             object : BillingClientStateListener {
                 override fun onBillingSetupFinished(billingResult: BillingResult) {
                     if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                        _uiState.update { it.copy(isConnected = true, isLoading = false) }
+                        _uiState.update { state ->
+                            state.copy(
+                                isConnected = true,
+                                isLoading = false,
+                                statusMessage = if (!verificationClient.isConfigured) {
+                                    "Set FIELDLEDGER_BILLING_BACKEND_URL before granting Pro."
+                                } else {
+                                    state.statusMessage
+                                },
+                            )
+                        }
                         loadOffers()
                         refreshEntitlements()
                     } else {
@@ -210,6 +225,74 @@ class BillingRepository(
         }
     }
 
+    private suspend fun verifyPurchases(purchases: List<Purchase>) {
+        val supportedPurchases = purchases.filter { purchase ->
+            purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                purchase.products.any { it in supportedProductIds }
+        }
+
+        if (supportedPurchases.isEmpty()) {
+            _uiState.update {
+                it.copy(
+                    isPro = false,
+                    verificationSource = null,
+                    verifiedExpiryTime = null,
+                    statusMessage = if (!verificationClient.isConfigured) {
+                        "Set FIELDLEDGER_BILLING_BACKEND_URL before granting Pro."
+                    } else {
+                        "No verified active subscription found."
+                    },
+                )
+            }
+            return
+        }
+
+        if (!verificationClient.isConfigured) {
+            _uiState.update {
+                it.copy(
+                    isPro = false,
+                    verificationSource = null,
+                    verifiedExpiryTime = null,
+                    statusMessage = "Billing backend URL is not configured.",
+                )
+            }
+            return
+        }
+
+        var activeResult: BillingVerificationResult? = null
+        var lastResult: BillingVerificationResult? = null
+
+        supportedPurchases.forEach { purchase ->
+            val result = verificationClient.verifySubscription(
+                packageName = appContext.packageName,
+                purchase = purchase,
+            )
+            lastResult = result
+
+            if (result.active) {
+                if (!purchase.isAcknowledged) {
+                    acknowledgePurchase(purchase)
+                }
+                activeResult = result
+                return@forEach
+            }
+        }
+
+        val winningResult = activeResult ?: lastResult
+        _uiState.update {
+            it.copy(
+                isPro = winningResult?.active == true,
+                verificationSource = winningResult?.verificationSource,
+                verifiedExpiryTime = winningResult?.latestExpiryTime,
+                statusMessage = when {
+                    winningResult?.active == true -> "Pro verified by backend."
+                    winningResult != null && !winningResult.statusMessage.isNullOrBlank() -> winningResult.statusMessage
+                    else -> "No verified active subscription found."
+                },
+            )
+        }
+    }
+
     private fun toDisplayOffer(product: ProductDetails): DisplayOffer? {
         val subscriptionOffer = product.subscriptionOfferDetails
             ?.firstOrNull()
@@ -241,26 +324,17 @@ class BillingRepository(
         }
     }
 
-    private fun handlePurchase(purchase: Purchase) {
-        if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
-        if (purchase.products.none { it in supportedProductIds }) return
-
-        if (!purchase.isAcknowledged) {
-            acknowledgePurchase(purchase)
-        }
-
-        _uiState.update {
-            it.copy(isPro = true, statusMessage = "Pro unlocked on this device.")
-        }
-    }
-
     private fun acknowledgePurchase(purchase: Purchase) {
         val params = AcknowledgePurchaseParams.newBuilder()
             .setPurchaseToken(purchase.purchaseToken)
             .build()
 
-        billingClient.acknowledgePurchase(params) { _ ->
-            // MVP note: production apps should verify purchases on a secure backend.
+        billingClient.acknowledgePurchase(params) { result ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                _uiState.update {
+                    it.copy(statusMessage = result.debugMessage.takeIf(String::isNotBlank))
+                }
+            }
         }
     }
 

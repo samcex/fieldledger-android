@@ -5,11 +5,19 @@ import com.indie.shiftledger.model.CurrencyOption
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.UUID
 
 class SettingsRepository(
     context: Context,
 ) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val installationId: String = prefs.getString(KEY_INSTALLATION_ID, null)
+        ?: UUID.randomUUID().toString().also { generatedId ->
+            prefs.edit()
+                .putString(KEY_INSTALLATION_ID, generatedId)
+                .apply()
+        }
+
     private val _currency = MutableStateFlow(
         CurrencyOption.fromCode(
             prefs.getString(KEY_CURRENCY_CODE, CurrencyOption.USD.code),
@@ -46,5 +54,6 @@ class SettingsRepository(
         const val PREFS_NAME = "field-ledger-settings"
         const val KEY_CURRENCY_CODE = "currency_code"
         const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
+        const val KEY_INSTALLATION_ID = "installation_id"
     }
 }

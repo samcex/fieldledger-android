@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.indie.shiftledger.export.InvoicePdfExporter
+import com.indie.shiftledger.export.InvoiceShareLauncher
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.ui.screens.DashboardScreen
 import com.indie.shiftledger.ui.screens.HistoryScreen
@@ -59,6 +61,7 @@ fun FieldLedgerApp(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val invoiceExporter = remember(context) { InvoicePdfExporter(context) }
 
     LaunchedEffect(uiState.snackbarMessage) {
         val message = uiState.snackbarMessage ?: return@LaunchedEffect
@@ -148,6 +151,16 @@ fun FieldLedgerApp(
                         contentPadding = contentPadding,
                         jobs = uiState.jobs,
                         currency = uiState.currency,
+                        onExport = { job ->
+                            runCatching {
+                                val pdfFile = invoiceExporter.export(job, uiState.currency)
+                                InvoiceShareLauncher.share(context, pdfFile)
+                            }.onFailure {
+                                viewModel.showMessage("Could not export invoice PDF.")
+                            }
+                        },
+                        onScheduleReminder = viewModel::scheduleReminderTomorrow,
+                        onClearReminder = viewModel::clearReminder,
                         onDelete = viewModel::deleteJob,
                     )
 

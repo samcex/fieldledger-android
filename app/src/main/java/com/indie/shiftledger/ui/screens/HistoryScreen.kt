@@ -10,7 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.AlarmOff
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -33,6 +36,9 @@ fun HistoryScreen(
     contentPadding: PaddingValues,
     jobs: List<JobRecord>,
     currency: CurrencyOption,
+    onExport: (JobRecord) -> Unit,
+    onScheduleReminder: (Long) -> Unit,
+    onClearReminder: (Long) -> Unit,
     onDelete: (Long) -> Unit,
 ) {
     val openJobs = jobs.count { it.invoiceStatus.isOutstanding }
@@ -57,7 +63,7 @@ fun HistoryScreen(
                 ) {
                     Text(text = "Job pipeline", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        text = "Stay on top of quotes, sent invoices, and paid work without leaving the timeline.",
+                        text = "Stay on top of quotes, sent invoices, reminders, and paid work without leaving the timeline.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -82,7 +88,7 @@ fun HistoryScreen(
                     ) {
                         Text(text = "No jobs yet", style = MaterialTheme.typography.titleSmall)
                         Text(
-                            text = "Saved jobs land here with invoice stage, billed total, and profit so you can spot follow-ups fast.",
+                            text = "Saved jobs land here with invoice stage, billed total, reminders, and profit so you can spot follow-ups fast.",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -111,6 +117,33 @@ fun HistoryScreen(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
+                                IconButton(onClick = { onExport(job) }) {
+                                    Icon(Icons.Rounded.Share, contentDescription = "Export invoice PDF")
+                                }
+                                if (job.invoiceStatus.isOutstanding) {
+                                    IconButton(
+                                        onClick = {
+                                            if (job.hasReminder) {
+                                                onClearReminder(job.id)
+                                            } else {
+                                                onScheduleReminder(job.id)
+                                            }
+                                        },
+                                    ) {
+                                        Icon(
+                                            imageVector = if (job.hasReminder) {
+                                                Icons.Rounded.AlarmOff
+                                            } else {
+                                                Icons.Rounded.Alarm
+                                            },
+                                            contentDescription = if (job.hasReminder) {
+                                                "Clear reminder"
+                                            } else {
+                                                "Schedule reminder"
+                                            },
+                                        )
+                                    }
+                                }
                                 InvoiceStatusBadge(status = job.invoiceStatus)
                                 IconButton(onClick = { onDelete(job.id) }) {
                                     Icon(Icons.Rounded.Delete, contentDescription = "Delete job")
@@ -126,6 +159,20 @@ fun HistoryScreen(
                             text = "Invoice ${formatCurrency(job.invoiceTotal, currency)}  •  Profit ${formatCurrency(job.estimatedProfit, currency)}  •  Costs ${formatCurrency(job.totalCosts, currency)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
+                        if (job.paymentDueDate != null) {
+                            Text(
+                                text = "Due ${formatShortDate(job.paymentDueDate)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (job.hasReminder && job.reminderDate != null) {
+                            Text(
+                                text = "Reminder ${formatShortDate(job.reminderDate)}  •  ${job.reminderMessage}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         if (job.siteAddress.isNotBlank()) {
                             Text(text = job.siteAddress, style = MaterialTheme.typography.bodySmall)
                         }

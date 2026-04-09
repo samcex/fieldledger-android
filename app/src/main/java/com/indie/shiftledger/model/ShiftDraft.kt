@@ -19,6 +19,9 @@ data class JobDraft(
     val travelCostText: String = "0",
     val status: InvoiceStatus = InvoiceStatus.DraftQuote,
     val workSummary: String = "",
+    val dueDateText: String = "",
+    val reminderDateText: String = "",
+    val reminderNote: String = "",
 )
 
 data class DraftValidation(
@@ -32,6 +35,8 @@ data class JobDraftPreview(
     val invoiceTotal: Double,
     val totalCosts: Double,
     val estimatedProfit: Double,
+    val dueDateText: String,
+    val reminderDateText: String,
 )
 
 fun JobDraft.preview(): JobDraftPreview {
@@ -52,6 +57,8 @@ fun JobDraft.preview(): JobDraftPreview {
         invoiceTotal = invoiceTotal,
         totalCosts = totalCosts,
         estimatedProfit = invoiceTotal - totalCosts,
+        dueDateText = dueDateText.trim(),
+        reminderDateText = reminderDateText.trim(),
     )
 }
 
@@ -93,6 +100,24 @@ fun JobDraft.validate(): DraftValidation {
         return DraftValidation(errorMessage = "Labor rate must be greater than zero.")
     }
 
+    val dueDate = runCatching {
+        parseOptionalDate(
+            rawValue = dueDateText,
+            fieldName = "Due date",
+        )
+    }.getOrElse { error ->
+        return DraftValidation(errorMessage = error.message)
+    }
+
+    val reminderDate = runCatching {
+        parseOptionalDate(
+            rawValue = reminderDateText,
+            fieldName = "Reminder date",
+        )
+    }.getOrElse { error ->
+        return DraftValidation(errorMessage = error.message)
+    }
+
     return DraftValidation(
         job = JobRecord(
             clientName = client,
@@ -109,8 +134,25 @@ fun JobDraft.validate(): DraftValidation {
             travelCost = travelCostText.toDoubleOrNull() ?: 0.0,
             invoiceStatus = status,
             workSummary = workSummary.trim(),
+            paymentDueDate = dueDate,
+            reminderDate = reminderDate.takeIf { status.isOutstanding },
+            reminderNote = reminderNote.trim(),
         ),
     )
+}
+
+private fun parseOptionalDate(
+    rawValue: String,
+    fieldName: String,
+): LocalDate? {
+    val trimmed = rawValue.trim()
+    if (trimmed.isEmpty()) return null
+
+    return try {
+        LocalDate.parse(trimmed)
+    } catch (_: DateTimeParseException) {
+        throw IllegalArgumentException("$fieldName must use YYYY-MM-DD.")
+    }
 }
 
 private fun safeHours(startTime: String, endTime: String): Double {

@@ -11,8 +11,13 @@ class JobRepository(
         entities.map { it.asRecord() }
     }
 
-    suspend fun save(job: JobRecord) {
-        jobDao.insert(job.asEntity())
+    suspend fun allJobs(): List<JobRecord> {
+        return jobDao.getAll().map { it.asRecord() }
+    }
+
+    suspend fun save(job: JobRecord): JobRecord {
+        val persistedId = jobDao.insert(job.asEntity())
+        return job.copy(id = if (persistedId > 0L) persistedId else job.id)
     }
 
     suspend fun deleteById(id: Long) {

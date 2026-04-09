@@ -17,6 +17,8 @@ import com.indie.shiftledger.model.JobDraft
 import com.indie.shiftledger.model.JobRecord
 import com.indie.shiftledger.model.MonetizationPlan
 import com.indie.shiftledger.model.validate
+import com.indie.shiftledger.notifications.ReminderScheduler
+import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +31,7 @@ class FieldLedgerViewModel(
     private val jobRepository: JobRepository,
     private val billingRepository: BillingRepository,
     private val settingsRepository: SettingsRepository,
+    private val reminderScheduler: ReminderScheduler,
 ) : ViewModel() {
     private val selectedTab = MutableStateFlow(FieldLedgerTab.Dashboard)
     private val draft = MutableStateFlow(JobDraft())
@@ -70,6 +73,9 @@ class FieldLedgerViewModel(
 
     init {
         billingRepository.start()
+        viewModelScope.launch {
+            syncRemindersInternal()
+        }
     }
 
     fun selectTab(tab: FieldLedgerTab) {
@@ -83,6 +89,10 @@ class FieldLedgerViewModel(
     fun updateCurrency(currency: CurrencyOption) {
         settingsRepository.updateCurrency(currency)
         snackMessage.value = "Currency changed to ${currency.code}."
+    }
+
+    fun showMessage(message: String) {
+        snackMessage.value = message
     }
 
     fun completeOnboarding() {
@@ -107,7 +117,8 @@ class FieldLedgerViewModel(
         }
 
         viewModelScope.launch {
-            jobRepository.save(job)
+            val savedJob = jobRepository.save(job)
+            reminderScheduler.sync(savedJob)
             draft.value = JobDraft()
             selectedTab.value = FieldLedgerTab.Dashboard
             snackMessage.value = "Job saved."
@@ -117,7 +128,50 @@ class FieldLedgerViewModel(
     fun deleteJob(id: Long) {
         viewModelScope.launch {
             jobRepository.deleteById(id)
+            reminderScheduler.cancel(id)
             snackMessage.value = "Job deleted."
+        }
+    }
+
+    fun scheduleReminderTomorrow(id: Long) {
+        val existingJob = uiState.value.jobs.firstOrNull { it.id == id } ?: return
+        if (!existingJob.invoiceStatus.isOutstanding) {
+            snackMessage.value = "Paid jobs do not need reminders."
+            return
+        }
+
+        viewModelScope.launch {
+            val savedJob = jobRepository.save(
+                existingJob.copy(
+                    reminderDate = LocalDate.now().plusDays(1),
+                    reminderNote = existingJob.reminderNote.ifBlank {
+                        "Follow up with ${existingJob.clientName} about ${existingJob.jobName}."
+                    },
+                ),
+            )
+            reminderScheduler.sync(savedJob)
+            snackMessage.value = "Reminder set for tomorrow morning."
+        }
+    }
+
+    fun clearReminder(id: Long) {
+        val existingJob = uiState.value.jobs.firstOrNull { it.id == id } ?: return
+
+        viewModelScope.launch {
+            val savedJob = jobRepository.save(
+                existingJob.copy(
+                    reminderDate = null,
+                    reminderNote = "",
+                ),
+            )
+            reminderScheduler.sync(savedJob)
+            snackMessage.value = "Reminder cleared."
+        }
+    }
+
+    fun syncReminders() {
+        viewModelScope.launch {
+            syncRemindersInternal()
         }
     }
 
@@ -141,6 +195,10 @@ class FieldLedgerViewModel(
         billingRepository.close()
     }
 
+    private suspend fun syncRemindersInternal() {
+        jobRepository.allJobs().forEach(reminderScheduler::sync)
+    }
+
     companion object {
         fun factory(context: Context): ViewModelProvider.Factory {
             val appContext = context.applicationContext
@@ -149,9 +207,10 @@ class FieldLedgerViewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     val database = JobDatabase.build(appContext)
                     val repository = JobRepository(database.jobDao())
-                    val billing = BillingRepository(appContext)
                     val settings = SettingsRepository(appContext)
-                    return FieldLedgerViewModel(repository, billing, settings) as T
+                    val billing = BillingRepository(appContext, settings)
+                    val reminders = ReminderScheduler(appContext)
+                    return FieldLedgerViewModel(repository, billing, settings, reminders) as T
                 }
             }
         }

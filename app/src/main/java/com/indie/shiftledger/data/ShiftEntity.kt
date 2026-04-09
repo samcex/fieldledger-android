@@ -24,6 +24,9 @@ data class JobEntity(
     val travelCost: Double,
     val invoiceStatus: String,
     val workSummary: String,
+    val paymentDueEpochDay: Long?,
+    val reminderEpochDay: Long?,
+    val reminderNote: String,
 )
 
 fun JobEntity.asRecord(): JobRecord = JobRecord(
@@ -42,6 +45,9 @@ fun JobEntity.asRecord(): JobRecord = JobRecord(
     travelCost = travelCost,
     invoiceStatus = runCatching { InvoiceStatus.valueOf(invoiceStatus) }.getOrDefault(InvoiceStatus.DraftQuote),
     workSummary = workSummary,
+    paymentDueDate = paymentDueEpochDay?.let(LocalDate::ofEpochDay),
+    reminderDate = reminderEpochDay?.let(LocalDate::ofEpochDay),
+    reminderNote = reminderNote,
 )
 
 fun JobRecord.asEntity(): JobEntity = JobEntity(
@@ -60,4 +66,7 @@ fun JobRecord.asEntity(): JobEntity = JobEntity(
     travelCost = travelCost,
     invoiceStatus = invoiceStatus.name,
     workSummary = workSummary,
+    paymentDueEpochDay = paymentDueDate?.toEpochDay(),
+    reminderEpochDay = reminderDate?.toEpochDay(),
+    reminderNote = reminderNote,
 )

@@ -61,6 +61,22 @@ fun PaywallScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    Text(
+                        text = if (billing.isVerificationConfigured) {
+                            "Entitlements are granted only after backend verification."
+                        } else {
+                            "Set FIELDLEDGER_BILLING_BACKEND_URL to enable verified Pro entitlements."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    billing.verificationSource?.let { source ->
+                        Text(
+                            text = "Verification source: $source",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -97,7 +113,7 @@ fun PaywallScreen(
                 ) {
                     Text(text = "Before launch", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        text = "Google Play subscription products must exist before purchase buttons will activate. Refresh after creating the matching test products in Play Console.",
+                        text = "Google Play subscription products must exist before purchase buttons will activate, and the backend verifier must be reachable before Pro unlocks. Refresh after creating the matching test products and wiring the verification endpoint.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

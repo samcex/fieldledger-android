@@ -15,31 +15,35 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 
 - Kotlin + Jetpack Compose Android app
 - Room persistence for local-first job storage
-- Google Play Billing integration scaffold for `Pro`
+- Google Play Billing integration with backend-verification client
+- Node backend verifier in [`backend/README.md`](/root/shiftledger-android/backend/README.md)
 - Monetization notes in [`docs/monetization-strategy.md`](/root/shiftledger-android/docs/monetization-strategy.md)
 - Play Store copy and asset source files in [`docs/play-store/listing.md`](/root/shiftledger-android/docs/play-store/listing.md)
-- Release notes in [`docs/releases/v0.2.0.md`](/root/shiftledger-android/docs/releases/v0.2.0.md)
+- Release signing guide in [`docs/release-signing.md`](/root/shiftledger-android/docs/release-signing.md)
+- Release notes in [`docs/releases/v0.3.0.md`](/root/shiftledger-android/docs/releases/v0.3.0.md)
 
 ## Current MVP
 
 - Dashboard with weekly revenue, costs, profit, and open follow-ups
 - First-launch onboarding with default currency selection
-- Job entry form with live invoice/profit preview
-- Job pipeline/history screen with invoice stage badges
+- Job entry form with live invoice/profit preview, due date, and reminder fields
+- Job pipeline/history screen with invoice export and reminder actions
 - Settings screen for currency preferences
-- Google Play subscription paywall shell
+- PDF invoice summary export and share flow
+- Local unpaid reminder notifications
+- Google Play subscription paywall wired for backend verification
+- Release-signed AAB path for Play Console uploads
 - Debug APK build for device testing
 
 ## Testing Build
 
-The repository currently ships a debug APK for testing through GitHub Releases. It is not a Play-ready production build.
+The repository can produce both a release-signed `.aab` for Play Console and a debug APK for direct device testing.
 
 Important limits:
 
-- The current release is debug-signed
-- Billing is client-side MVP logic only
-- No backend purchase verification yet
-- No invoice PDF export yet
+- Billing requires a configured backend verifier URL for real Pro unlocks
+- The included backend is shipped in-repo but not deployed for you
+- Local signing material must stay private and out of git
 
 ## Build Requirements
 
@@ -47,17 +51,20 @@ Important limits:
 - Android SDK Platform 36
 - Android Build Tools 35.0.0
 - Gradle 8.13
+- Node.js 18+ if you want to run the bundled billing backend locally
 
 ## Local Build
 
 ```bash
 ./gradlew assembleDebug
+./gradlew bundleRelease
 ```
 
-APK output:
+Outputs:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
+app/build/outputs/bundle/release/app-release.aab
 ```
 
 ## Why This Product
@@ -72,8 +79,7 @@ Reference material:
 
 ## Next Steps
 
-1. Add invoice/PDF export.
-2. Replace client-side billing state with server-side purchase verification.
-3. Add reminder workflows for unpaid jobs.
-4. Export the branded SVG store assets to final PNGs for Play Console.
-5. Create release and Play signing configs for production.
+1. Deploy the bundled billing backend and connect it to a real Play Console app.
+2. Export the branded SVG store assets to final PNGs for Play Console.
+3. Add edit/update flows for saved jobs and reminders.
+4. Add CSV export or email invoice delivery if you want a stronger upsell than static PDF share.
