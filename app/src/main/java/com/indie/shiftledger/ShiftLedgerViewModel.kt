@@ -18,6 +18,8 @@ import com.indie.shiftledger.model.JobDraft
 import com.indie.shiftledger.model.JobRecord
 import com.indie.shiftledger.model.MonetizationPlan
 import com.indie.shiftledger.model.ThemeMode
+import com.indie.shiftledger.model.asDraft
+import com.indie.shiftledger.model.isEditing
 import com.indie.shiftledger.model.validate
 import com.indie.shiftledger.notifications.ReminderScheduler
 import java.time.LocalDate
@@ -97,6 +99,24 @@ class FieldLedgerViewModel(
         draft.update(transform)
     }
 
+    fun editJob(id: Long) {
+        val existingJob = uiState.value.jobs.firstOrNull { it.id == id } ?: run {
+            snackMessage.value = "Could not open that job."
+            return
+        }
+
+        draft.value = existingJob.asDraft()
+        selectedTab.value = FieldLedgerTab.AddJob
+        snackMessage.value = "Editing ${existingJob.jobName}."
+    }
+
+    fun cancelDraftEdit() {
+        if (!draft.value.isEditing) return
+        draft.value = JobDraft()
+        selectedTab.value = FieldLedgerTab.History
+        snackMessage.value = "Edit cancelled."
+    }
+
     fun updateCurrency(currency: CurrencyOption) {
         settingsRepository.updateCurrency(currency)
         snackMessage.value = "Currency changed to ${currency.code}."
@@ -127,7 +147,7 @@ class FieldLedgerViewModel(
 
     fun saveDraft() {
         val state = uiState.value
-        if (!state.billing.isPro && state.jobs.size >= MonetizationPlan.freeJobLimit) {
+        if (!state.billing.isPro && !state.draft.isEditing && state.jobs.size >= MonetizationPlan.freeJobLimit) {
             selectedTab.value = FieldLedgerTab.Pro
             snackMessage.value = "Free plan limit reached. Upgrade to keep adding jobs."
             return
@@ -143,9 +163,10 @@ class FieldLedgerViewModel(
         viewModelScope.launch {
             val savedJob = jobRepository.save(job)
             reminderScheduler.sync(savedJob)
+            val wasEditing = state.draft.isEditing
             draft.value = JobDraft()
-            selectedTab.value = FieldLedgerTab.Dashboard
-            snackMessage.value = "Job saved."
+            selectedTab.value = if (wasEditing) FieldLedgerTab.History else FieldLedgerTab.Dashboard
+            snackMessage.value = if (wasEditing) "Job updated." else "Job saved."
         }
     }
 
@@ -298,6 +319,9 @@ data class FieldLedgerUiState(
 ) {
     val remainingFreeEntries: Int
         get() = (MonetizationPlan.freeJobLimit - jobs.size).coerceAtLeast(0)
+
+    val isEditingDraft: Boolean
+        get() = draft.isEditing
 }
 
 enum class FieldLedgerTab {

@@ -26,6 +26,7 @@ class InvoicePdfExporter(
         currency: CurrencyOption,
         companyName: String,
         logoUri: String?,
+        isPro: Boolean,
     ): File {
         val exportDir = File(appContext.cacheDir, "invoice-exports").apply { mkdirs() }
         val safeClient = job.clientName.replace(Regex("[^A-Za-z0-9]+"), "-").trim('-')
@@ -39,7 +40,7 @@ class InvoicePdfExporter(
         val page = document.startPage(pageInfo)
         val canvas = page.canvas
         val brandName = companyName.ifBlank { "ShiftLedger" }
-        val logoBitmap = loadLogoBitmap(logoUri)
+        val logoBitmap = if (isPro) loadLogoBitmap(logoUri) else null
 
         val pageWidth = pageInfo.pageWidth.toFloat()
         val contentLeft = 42f
@@ -77,6 +78,11 @@ class InvoicePdfExporter(
             color = Color.parseColor("#5F6368")
             textSize = 11f
         }
+        val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#6B7280")
+            textSize = 10f
+            textAlign = Paint.Align.CENTER
+        }
         val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#111111")
             textSize = 12f
@@ -86,16 +92,21 @@ class InvoicePdfExporter(
             color = Color.parseColor("#E4E4E7")
             strokeWidth = 1f
         }
+        val logoPlatePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#FFFFFF")
+        }
 
-        val headerRect = RectF(contentLeft, 34f, contentRight, 150f)
+        val headerRect = RectF(contentLeft, 34f, contentRight, 178f)
         canvas.drawRoundRect(headerRect, 26f, 26f, headerPaint)
         canvas.drawRoundRect(headerRect, 26f, 26f, headerBorderPaint)
 
         var brandTextLeft = contentLeft + 22f
         if (logoBitmap != null) {
-            val scaledLogo = logoBitmap.scaledToFit(maxWidth = 72, maxHeight = 72)
+            val scaledLogo = logoBitmap.scaledToFit(maxWidth = 104, maxHeight = 104)
             val logoLeft = contentLeft + 20f
-            val logoTop = 56f
+            val logoTop = 54f
+            val logoPlateRect = RectF(logoLeft - 8f, logoTop - 8f, logoLeft + 112f, logoTop + 112f)
+            canvas.drawRoundRect(logoPlateRect, 22f, 22f, logoPlatePaint)
             val logoRect = RectF(
                 logoLeft,
                 logoTop,
@@ -103,21 +114,21 @@ class InvoicePdfExporter(
                 logoTop + scaledLogo.height,
             )
             canvas.drawBitmap(scaledLogo, null, logoRect, null)
-            brandTextLeft = logoRect.right + 18f
+            brandTextLeft = logoPlateRect.right + 18f
         }
 
-        canvas.drawText(brandName, brandTextLeft, 78f, brandPaint)
-        canvas.drawText("Invoice for ${job.clientName}", brandTextLeft, 102f, bodyPaint)
-        canvas.drawText("Status: ${job.invoiceStatus.label}", brandTextLeft, 122f, mutedPaint)
+        canvas.drawText(brandName, brandTextLeft, 88f, brandPaint)
+        canvas.drawText("Invoice for ${job.clientName}", brandTextLeft, 114f, bodyPaint)
+        canvas.drawText("Status: ${job.invoiceStatus.label}", brandTextLeft, 136f, mutedPaint)
 
         val invoiceLabel = "INVOICE"
         val invoiceLabelWidth = titlePaint.measureText(invoiceLabel)
-        canvas.drawText(invoiceLabel, contentRight - invoiceLabelWidth - 20f, 80f, titlePaint)
+        canvas.drawText(invoiceLabel, contentRight - invoiceLabelWidth - 20f, 84f, titlePaint)
         val totalText = formatCurrency(job.invoiceTotal, currency)
         val totalWidth = accentPaint.measureText(totalText)
-        canvas.drawText(totalText, contentRight - totalWidth - 20f, 118f, accentPaint)
+        canvas.drawText(totalText, contentRight - totalWidth - 20f, 128f, accentPaint)
 
-        var y = 188f
+        var y = 216f
         canvas.drawText("Job details", contentLeft, y, sectionPaint)
         y += 24f
         drawLine(canvas, bodyPaint, "Service", job.jobName, y)
@@ -182,6 +193,15 @@ class InvoicePdfExporter(
             canvas = canvas,
             paint = bodyPaint,
         )
+
+        if (!isPro) {
+            canvas.drawText(
+                "Made with ShiftLedger",
+                pageWidth / 2f,
+                pageInfo.pageHeight - 28f,
+                footerPaint,
+            )
+        }
 
         document.finishPage(page)
         exportFile.outputStream().use(document::writeTo)

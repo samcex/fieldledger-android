@@ -45,6 +45,7 @@ import com.indie.shiftledger.model.JobDraft
 import com.indie.shiftledger.model.PricingMode
 import com.indie.shiftledger.model.formatCurrency
 import com.indie.shiftledger.model.formatHours
+import com.indie.shiftledger.model.isEditing
 import com.indie.shiftledger.model.preview
 import com.indie.shiftledger.ui.theme.LedgerHeroPanel
 import com.indie.shiftledger.ui.theme.LedgerMetricTile
@@ -67,12 +68,14 @@ fun JobFormScreen(
     currency: CurrencyOption,
     jobCount: Int,
     remainingFreeEntries: Int,
+    isEditing: Boolean,
     onDraftChange: ((JobDraft) -> JobDraft) -> Unit,
     onSave: () -> Unit,
+    onCancelEdit: () -> Unit,
     onOpenPro: () -> Unit,
 ) {
     val preview = draft.preview()
-    val limitReached = !billing.isPro && remainingFreeEntries == 0
+    val limitReached = !billing.isPro && !isEditing && remainingFreeEntries == 0
     var showJobDetails by rememberSaveable {
         mutableStateOf(draft.siteAddress.isNotBlank() || draft.workSummary.isNotBlank())
     }
@@ -99,7 +102,7 @@ fun JobFormScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = "New job",
+                    label = if (isEditing) "Edit job" else "New job",
                     containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f),
                     contentColor = androidx.compose.ui.graphics.Color.White,
                 )
@@ -113,6 +116,13 @@ fun JobFormScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f),
                 )
+                if (isEditing) {
+                    Text(
+                        text = "You are updating an existing saved job.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.88f),
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     HeroDraftPill(label = "Currency ${currency.code}")
                     HeroDraftPill(label = if (billing.isPro) "Pro active" else "$remainingFreeEntries free left")
@@ -414,8 +424,12 @@ fun JobFormScreen(
                 borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
             ) {
                 LedgerSectionHeader(
-                    title = "Save job",
-                    body = "Check the main numbers before you save.",
+                    title = if (isEditing) "Update job" else "Save job",
+                    body = if (isEditing) {
+                        "Review the main numbers before updating the saved job."
+                    } else {
+                        "Check the main numbers before you save."
+                    },
                 )
                 Text(
                     text = "Total ${formatCurrency(preview.invoiceTotal, currency)}  •  Costs ${formatCurrency(preview.totalCosts, currency)}  •  Profit ${formatCurrency(preview.estimatedProfit, currency)}",
@@ -436,7 +450,12 @@ fun JobFormScreen(
                     }
                 } else {
                     Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
-                        Text("Save job")
+                        Text(if (isEditing) "Update job" else "Save job")
+                    }
+                    if (draft.isEditing) {
+                        Button(onClick = onCancelEdit, modifier = Modifier.fillMaxWidth()) {
+                            Text("Cancel edit")
+                        }
                     }
                 }
             }

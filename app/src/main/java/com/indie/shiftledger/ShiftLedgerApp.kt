@@ -134,6 +134,7 @@ fun FieldLedgerApp(
                                 selectedTab = uiState.selectedTab,
                                 currency = uiState.currency,
                                 isPro = uiState.billing.isPro,
+                                isEditingDraft = uiState.isEditingDraft,
                             )
                         }
                     },
@@ -176,8 +177,10 @@ fun FieldLedgerApp(
                             currency = uiState.currency,
                             jobCount = uiState.jobs.size,
                             remainingFreeEntries = uiState.remainingFreeEntries,
+                            isEditing = uiState.isEditingDraft,
                             onDraftChange = { updater -> viewModel.updateDraft(updater) },
                             onSave = viewModel::saveDraft,
+                            onCancelEdit = viewModel::cancelDraftEdit,
                             onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
                         )
 
@@ -194,6 +197,7 @@ fun FieldLedgerApp(
                                         currency = uiState.currency,
                                         companyName = uiState.companyName,
                                         logoUri = uiState.logoUri,
+                                        isPro = uiState.billing.isPro,
                                     )
                                     InvoiceShareLauncher.share(context, pdfFile)
                                     viewModel.markInvoiceSent(job.id, notify = false)
@@ -205,6 +209,7 @@ fun FieldLedgerApp(
                             onScheduleReminder = viewModel::scheduleReminderTomorrow,
                             onClearReminder = viewModel::clearReminder,
                             onMarkPaid = viewModel::markJobPaid,
+                            onEdit = viewModel::editJob,
                             onDelete = viewModel::deleteJob,
                         )
 
@@ -226,6 +231,7 @@ fun FieldLedgerApp(
                             modifier = Modifier.padding(bottom = 8.dp),
                             listState = settingsListState,
                             contentPadding = contentPadding,
+                            billing = uiState.billing,
                             currency = uiState.currency,
                             themeMode = uiState.themeMode,
                             companyName = uiState.companyName,
@@ -234,6 +240,7 @@ fun FieldLedgerApp(
                             onThemeModeChanged = viewModel::updateThemeMode,
                             onCompanyNameChanged = viewModel::updateCompanyName,
                             onLogoUriChanged = viewModel::updateLogoUri,
+                            onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
                         )
                     }
                 }
@@ -275,8 +282,12 @@ private fun AppChrome(
     selectedTab: FieldLedgerTab,
     currency: CurrencyOption,
     isPro: Boolean,
+    isEditingDraft: Boolean,
 ) {
-    val meta = tabMeta(selectedTab)
+    val meta = tabMeta(
+        selectedTab = selectedTab,
+        isEditingDraft = isEditingDraft,
+    )
 
     Surface(
         modifier = Modifier
@@ -449,15 +460,22 @@ private data class TabMeta(
     val subtitle: String,
 )
 
-private fun tabMeta(selectedTab: FieldLedgerTab): TabMeta = when (selectedTab) {
+private fun tabMeta(
+    selectedTab: FieldLedgerTab,
+    isEditingDraft: Boolean,
+): TabMeta = when (selectedTab) {
     FieldLedgerTab.Dashboard -> TabMeta(
         title = "Home",
         subtitle = "This week, unpaid jobs, and recent work.",
     )
 
     FieldLedgerTab.AddJob -> TabMeta(
-        title = "New job",
-        subtitle = "Add a job and save it in a minute.",
+        title = if (isEditingDraft) "Edit job" else "New job",
+        subtitle = if (isEditingDraft) {
+            "Update the saved job and keep the same invoice record."
+        } else {
+            "Add a job and save it in a minute."
+        },
     )
 
     FieldLedgerTab.History -> TabMeta(

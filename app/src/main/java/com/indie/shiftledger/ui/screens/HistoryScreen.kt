@@ -2,9 +2,10 @@ package com.indie.shiftledger.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -15,13 +16,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.AlarmOff
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +57,7 @@ fun HistoryScreen(
     onScheduleReminder: (Long) -> Unit,
     onClearReminder: (Long) -> Unit,
     onMarkPaid: (Long) -> Unit,
+    onEdit: (Long) -> Unit,
     onDelete: (Long) -> Unit,
 ) {
     val openJobs = jobs.count { it.invoiceStatus.isOutstanding }
@@ -127,7 +129,7 @@ fun HistoryScreen(
                 body = if (displayJobs.isEmpty()) {
                     "No work has been saved yet."
                 } else {
-                    "Unpaid jobs stay at the top. You can share, remind, clear, or delete each job."
+                    "Unpaid jobs stay at the top. You can edit, share, remind, mark paid, or delete each job."
                 },
             )
         }
@@ -148,6 +150,7 @@ fun HistoryScreen(
                     onScheduleReminder = onScheduleReminder,
                     onClearReminder = onClearReminder,
                     onMarkPaid = onMarkPaid,
+                    onEdit = onEdit,
                     onDelete = onDelete,
                 )
             }
@@ -183,6 +186,7 @@ private fun RowScope.HistoryHeroMetric(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun JobPipelineCard(
     job: JobRecord,
@@ -191,6 +195,7 @@ private fun JobPipelineCard(
     onScheduleReminder: (Long) -> Unit,
     onClearReminder: (Long) -> Unit,
     onMarkPaid: (Long) -> Unit,
+    onEdit: (Long) -> Unit,
     onDelete: (Long) -> Unit,
 ) {
     LedgerPanel {
@@ -255,11 +260,16 @@ private fun JobPipelineCard(
             )
         }
 
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            ActionPill(
+                icon = Icons.Rounded.Edit,
+                label = "Edit",
+                onClick = { onEdit(job.id) },
+            )
             ActionPill(
                 icon = Icons.Rounded.PictureAsPdf,
                 label = if (job.invoiceStatus.isOutstanding) "Send PDF" else "PDF",

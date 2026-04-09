@@ -5,6 +5,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeParseException
 
 data class JobDraft(
+    val id: Long = 0L,
     val clientName: String = "",
     val jobName: String = "",
     val siteAddress: String = "",
@@ -25,6 +26,9 @@ data class JobDraft(
     val reminderDateText: String = "",
     val reminderNote: String = "",
 )
+
+val JobDraft.isEditing: Boolean
+    get() = id != 0L
 
 data class DraftValidation(
     val job: JobRecord? = null,
@@ -128,6 +132,7 @@ fun JobDraft.validate(): DraftValidation {
 
     return DraftValidation(
         job = JobRecord(
+            id = id,
             clientName = client,
             jobName = jobName,
             siteAddress = siteAddress.trim(),
@@ -151,6 +156,29 @@ fun JobDraft.validate(): DraftValidation {
     )
 }
 
+fun JobRecord.asDraft(): JobDraft = JobDraft(
+    id = id,
+    clientName = clientName,
+    jobName = jobName,
+    siteAddress = siteAddress,
+    dateText = date.toString(),
+    startTimeText = startTime.toString(),
+    endTimeText = endTime.toString(),
+    pricingMode = pricingMode,
+    laborRateText = laborRate.toDraftAmount(),
+    fixedPriceText = fixedPrice.toDraftAmount(),
+    materialsBilledText = materialsBilled.toDraftAmount(),
+    calloutFeeText = calloutFee.toDraftAmount(),
+    extraChargeText = extraCharge.toDraftAmount(),
+    materialsCostText = materialsCost.toDraftAmount(),
+    travelCostText = travelCost.toDraftAmount(),
+    status = invoiceStatus,
+    workSummary = workSummary,
+    dueDateText = paymentDueDate?.toString().orEmpty(),
+    reminderDateText = reminderDate?.toString().orEmpty(),
+    reminderNote = reminderNote,
+)
+
 private fun parseOptionalDate(
     rawValue: String,
     fieldName: String,
@@ -170,4 +198,12 @@ private fun safeHours(startTime: String, endTime: String): Double {
     val end = runCatching { LocalTime.parse(endTime.trim()) }.getOrNull() ?: return 0.0
     if (!end.isAfter(start)) return 0.0
     return java.time.Duration.between(start, end).toMinutes() / 60.0
+}
+
+private fun Double.toDraftAmount(): String {
+    return if (this == 0.0) {
+        "0"
+    } else {
+        toBigDecimal().stripTrailingZeros().toPlainString()
+    }
 }
