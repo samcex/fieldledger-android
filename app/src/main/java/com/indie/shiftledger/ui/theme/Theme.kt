@@ -33,15 +33,15 @@ private val LightColors = lightColorScheme(
 )
 
 private val DarkColors = darkColorScheme(
-    primary = LedgerBrass,
+    primary = LedgerDarkText,
     onPrimary = LedgerDarkBackground,
-    primaryContainer = LedgerNavyRaised,
+    primaryContainer = LedgerDarkRaised,
     onPrimaryContainer = LedgerDarkText,
-    secondary = Color(0xFFD89B8E),
+    secondary = LedgerDarkText,
     onSecondary = LedgerDarkBackground,
     secondaryContainer = LedgerDarkWine,
     onSecondaryContainer = LedgerDarkText,
-    tertiary = Color(0xFFA8C1A0),
+    tertiary = LedgerDarkText,
     onTertiary = LedgerDarkBackground,
     tertiaryContainer = LedgerDarkOlive,
     onTertiaryContainer = LedgerDarkText,

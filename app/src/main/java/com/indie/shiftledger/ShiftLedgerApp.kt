@@ -40,12 +40,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.indie.shiftledger.export.InvoicePdfExporter
 import com.indie.shiftledger.export.InvoiceShareLauncher
@@ -203,44 +202,8 @@ private fun AppBackdrop(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                        MaterialTheme.colorScheme.background,
-                    ),
-                ),
-            ),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(180f, 80f),
-                        radius = 760f,
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(960f, 260f),
-                        radius = 960f,
-                    ),
-                ),
-        )
         content()
     }
 }
@@ -257,11 +220,12 @@ private fun AppChrome(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .zIndex(2f),
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(30.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)),
-        shadowElevation = 10.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+        shadowElevation = 14.dp,
     ) {
         Row(
             modifier = Modifier
