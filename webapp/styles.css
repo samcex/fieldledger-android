@@ -435,6 +435,20 @@ button {
   border: 1px solid transparent;
 }
 
+.pill-button {
+  appearance: none;
+  cursor: pointer;
+}
+
+.pill-button:hover {
+  transform: translateY(-1px);
+}
+
+.pill-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.38);
+  outline-offset: 2px;
+}
+
 .pill-default,
 .pill-soft {
   background: rgba(255, 255, 255, 0.44);

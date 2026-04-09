@@ -176,6 +176,24 @@ function resetDraft() {
   syncFormUiFromDraft();
 }
 
+function startFreshDraft() {
+  const wasEditing = isEditingDraft(state.draft);
+  const hadTypedValues = [
+    state.draft.clientName,
+    state.draft.jobName,
+    state.draft.siteAddress,
+    state.draft.workSummary,
+    state.draft.dueDateText,
+    state.draft.reminderDateText,
+    state.draft.reminderNote,
+    state.draft.fixedPriceText,
+  ].some((value) => String(value ?? "").trim().length > 0);
+
+  resetDraft();
+  state.selectedTab = TABS.ADD_JOB;
+  showToast(wasEditing ? "Started a new job draft." : hadTypedValues ? "Draft cleared." : "Ready for a new job.");
+}
+
 function updateDraft(field, value) {
   state.draft = {
     ...state.draft,
@@ -352,6 +370,11 @@ function handleContinueOnboarding() {
 }
 
 async function loadServerConfig() {
+  const fallbackConfig = {
+    forcePro: false,
+    offers: FALLBACK_OFFERS,
+  };
+
   try {
     const response = await fetch("/api/web-config");
     if (!response.ok) {
@@ -359,7 +382,7 @@ async function loadServerConfig() {
     }
     state.serverConfig = await response.json();
   } catch (_error) {
-    state.serverConfig = {};
+    state.serverConfig = fallbackConfig;
   }
   state.billing = createBillingState(state.serverConfig);
   queueRender();
@@ -402,6 +425,18 @@ function renderMetricTile(label, value, supporting) {
 
 function renderPill(label, tone = "default", extraAttributes = "") {
   return `<span class="pill pill-${tone}" ${extraAttributes}>${escapeHtml(label)}</span>`;
+}
+
+function renderPillButton(label, tone = "default", extraAttributes = "") {
+  return `
+    <button
+      type="button"
+      class="pill pill-${tone} pill-button"
+      ${extraAttributes}
+    >
+      ${escapeHtml(label)}
+    </button>
+  `;
 }
 
 function renderEmptyCard(title, body) {
@@ -669,7 +704,11 @@ function renderJobFormScreen() {
   return `
     <section class="screen">
       <article class="hero-card">
-        ${renderPill(isEditingDraft(state.draft) ? "Edit job" : "New job", "inverse")}
+        ${renderPillButton(
+          isEditingDraft(state.draft) ? "Edit job" : "New job",
+          "inverse",
+          'data-action="start-fresh-draft" title="Start with a blank job form"',
+        )}
         <h2>${escapeHtml(formatCurrency(preview.invoiceTotal, state.settings.currencyCode))}</h2>
         <p>Add the customer, amount, and reminder in a few simple steps.</p>
         ${
@@ -1320,6 +1359,9 @@ function handleActionClick(action, element) {
       break;
     case "continue-onboarding":
       handleContinueOnboarding();
+      break;
+    case "start-fresh-draft":
+      startFreshDraft();
       break;
     case "toggle-job-details":
       state.formUi.showJobDetails = !state.formUi.showJobDetails;

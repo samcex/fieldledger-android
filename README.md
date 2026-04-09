@@ -80,6 +80,7 @@ The repository now includes [`netlify.toml`](/root/shiftledger-android/netlify.t
 - No build step required
 - SPA routes are redirected to `index.html`
 - `/api/web-config` is served from the static fallback at [`webapp/api/web-config.json`](/root/shiftledger-android/webapp/api/web-config.json) when deployed on Netlify
+- The web app is deployable as a static site on Netlify without the Node backend
 
 Outputs:
 

@@ -4,6 +4,7 @@ const APP_ASSETS = [
   "/index.html",
   "/styles.css",
   "/app.js",
+  "/api/web-config.json",
   "/manifest.webmanifest",
   "/assets/icon.svg",
   "/lib/logic.js",
