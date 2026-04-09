@@ -44,7 +44,7 @@ fun SettingsScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = "Preferences",
+                    label = "Device setup",
                     containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f),
                     contentColor = androidx.compose.ui.graphics.Color.White,
                 )

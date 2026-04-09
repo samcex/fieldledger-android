@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -57,6 +58,16 @@ fun LedgerHeroPanel(
     contentPadding: PaddingValues = PaddingValues(24.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val heroGradient = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+        listOf(
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.secondaryContainer,
+        )
+    } else {
+        gradient
+    }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = Color.Transparent,
@@ -67,7 +78,7 @@ fun LedgerHeroPanel(
         Box(
             modifier = Modifier
                 .background(
-                    brush = Brush.linearGradient(gradient),
+                    brush = Brush.linearGradient(heroGradient),
                 )
                 .padding(contentPadding),
         ) {

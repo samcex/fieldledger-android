@@ -42,7 +42,7 @@ fun PaywallScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = if (billing.isPro) "Pro active" else "ShiftLedger Pro",
+                    label = if (billing.isPro) "Pro active" else "Subscription",
                     containerColor = Color.White.copy(alpha = 0.18f),
                     contentColor = Color.White,
                 )
