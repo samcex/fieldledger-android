@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [JobEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class JobDatabase : RoomDatabase() {
@@ -24,12 +24,19 @@ abstract class JobDatabase : RoomDatabase() {
             }
         }
 
+        private val Migration3To4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE jobs ADD COLUMN pricingMode TEXT NOT NULL DEFAULT 'hourly'")
+                db.execSQL("ALTER TABLE jobs ADD COLUMN fixedPrice REAL NOT NULL DEFAULT 0")
+            }
+        }
+
         fun build(context: Context): JobDatabase {
             return Room.databaseBuilder(
                 context,
                 JobDatabase::class.java,
                 "field-ledger.db",
-            ).addMigrations(Migration2To3)
+            ).addMigrations(Migration2To3, Migration3To4)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }

@@ -11,7 +11,9 @@ data class JobDraft(
     val dateText: String = LocalDate.now().toString(),
     val startTimeText: String = "08:00",
     val endTimeText: String = "12:00",
+    val pricingMode: PricingMode = PricingMode.Hourly,
     val laborRateText: String = "85",
+    val fixedPriceText: String = "",
     val materialsBilledText: String = "0",
     val calloutFeeText: String = "0",
     val extraChargeText: String = "0",
@@ -41,13 +43,14 @@ data class JobDraftPreview(
 
 fun JobDraft.preview(): JobDraftPreview {
     val laborRate = laborRateText.toDoubleOrNull() ?: 0.0
+    val fixedPrice = fixedPriceText.toDoubleOrNull() ?: 0.0
     val materialsBilled = materialsBilledText.toDoubleOrNull() ?: 0.0
     val calloutFee = calloutFeeText.toDoubleOrNull() ?: 0.0
     val extraCharge = extraChargeText.toDoubleOrNull() ?: 0.0
     val materialsCost = materialsCostText.toDoubleOrNull() ?: 0.0
     val travelCost = travelCostText.toDoubleOrNull() ?: 0.0
     val hours = safeHours(startTimeText, endTimeText)
-    val laborTotal = hours * laborRate
+    val laborTotal = if (pricingMode == PricingMode.Fixed) fixedPrice else hours * laborRate
     val invoiceTotal = laborTotal + materialsBilled + calloutFee + extraCharge
     val totalCosts = materialsCost + travelCost
 
@@ -95,9 +98,14 @@ fun JobDraft.validate(): DraftValidation {
         return DraftValidation(errorMessage = "End time must be after start time.")
     }
 
-    val laborRate = laborRateText.toDoubleOrNull()
-    if (laborRate == null || laborRate <= 0) {
-        return DraftValidation(errorMessage = "Labor rate must be greater than zero.")
+    val laborRate = laborRateText.toDoubleOrNull() ?: 0.0
+    if (pricingMode == PricingMode.Hourly && laborRate <= 0) {
+        return DraftValidation(errorMessage = "Hourly rate must be greater than zero.")
+    }
+
+    val fixedPrice = fixedPriceText.toDoubleOrNull() ?: 0.0
+    if (pricingMode == PricingMode.Fixed && fixedPrice <= 0) {
+        return DraftValidation(errorMessage = "Job price must be greater than zero.")
     }
 
     val dueDate = runCatching {
@@ -127,6 +135,8 @@ fun JobDraft.validate(): DraftValidation {
             startTime = start,
             endTime = end,
             laborRate = laborRate,
+            pricingMode = pricingMode,
+            fixedPrice = if (pricingMode == PricingMode.Fixed) fixedPrice else 0.0,
             materialsBilled = materialsBilledText.toDoubleOrNull() ?: 0.0,
             calloutFee = calloutFeeText.toDoubleOrNull() ?: 0.0,
             extraCharge = extraChargeText.toDoubleOrNull() ?: 0.0,

@@ -32,10 +32,18 @@ class SettingsRepository(
             prefs.getString(KEY_THEME_MODE, ThemeMode.Light.storageValue),
         ),
     )
+    private val _companyName = MutableStateFlow(
+        prefs.getString(KEY_COMPANY_NAME, "").orEmpty(),
+    )
+    private val _logoUri = MutableStateFlow(
+        prefs.getString(KEY_LOGO_URI, null),
+    )
 
     val currency: StateFlow<CurrencyOption> = _currency.asStateFlow()
     val onboardingComplete: StateFlow<Boolean> = _onboardingComplete.asStateFlow()
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+    val companyName: StateFlow<String> = _companyName.asStateFlow()
+    val logoUri: StateFlow<String?> = _logoUri.asStateFlow()
 
     fun updateCurrency(currency: CurrencyOption) {
         if (_currency.value == currency) return
@@ -57,6 +65,28 @@ class SettingsRepository(
         _themeMode.value = themeMode
     }
 
+    fun updateCompanyName(companyName: String) {
+        val normalizedValue = companyName.trim()
+        if (_companyName.value == normalizedValue) return
+
+        prefs.edit()
+            .putString(KEY_COMPANY_NAME, normalizedValue)
+            .apply()
+
+        _companyName.value = normalizedValue
+    }
+
+    fun updateLogoUri(logoUri: String?) {
+        val normalizedValue = logoUri?.takeIf { it.isNotBlank() }
+        if (_logoUri.value == normalizedValue) return
+
+        prefs.edit()
+            .putString(KEY_LOGO_URI, normalizedValue)
+            .apply()
+
+        _logoUri.value = normalizedValue
+    }
+
     fun completeOnboarding() {
         if (_onboardingComplete.value) return
 
@@ -73,5 +103,7 @@ class SettingsRepository(
         const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
         const val KEY_INSTALLATION_ID = "installation_id"
         const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_COMPANY_NAME = "company_name"
+        const val KEY_LOGO_URI = "logo_uri"
     }
 }

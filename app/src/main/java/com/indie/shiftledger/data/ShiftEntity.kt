@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.indie.shiftledger.model.InvoiceStatus
 import com.indie.shiftledger.model.JobRecord
+import com.indie.shiftledger.model.PricingMode
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -17,6 +18,8 @@ data class JobEntity(
     val startMinute: Int,
     val endMinute: Int,
     val laborRate: Double,
+    val pricingMode: String,
+    val fixedPrice: Double,
     val materialsBilled: Double,
     val calloutFee: Double,
     val extraCharge: Double,
@@ -38,6 +41,8 @@ fun JobEntity.asRecord(): JobRecord = JobRecord(
     startTime = LocalTime.of(startMinute / 60, startMinute % 60),
     endTime = LocalTime.of(endMinute / 60, endMinute % 60),
     laborRate = laborRate,
+    pricingMode = PricingMode.fromStorageValue(pricingMode),
+    fixedPrice = fixedPrice,
     materialsBilled = materialsBilled,
     calloutFee = calloutFee,
     extraCharge = extraCharge,
@@ -59,6 +64,8 @@ fun JobRecord.asEntity(): JobEntity = JobEntity(
     startMinute = (startTime.hour * 60) + startTime.minute,
     endMinute = (endTime.hour * 60) + endTime.minute,
     laborRate = laborRate,
+    pricingMode = pricingMode.storageValue,
+    fixedPrice = fixedPrice,
     materialsBilled = materialsBilled,
     calloutFee = calloutFee,
     extraCharge = extraCharge,

@@ -1,12 +1,14 @@
 package com.indie.shiftledger.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.indie.shiftledger.model.InvoiceStatus
 
@@ -27,7 +29,7 @@ fun InvoiceStatusBadge(
     }
 
     Surface(
-        modifier = modifier,
+        modifier = modifier.wrapContentWidth(),
         color = containerColor,
         contentColor = contentColor,
         shape = MaterialTheme.shapes.medium,
@@ -37,6 +39,9 @@ fun InvoiceStatusBadge(
             text = status.label.uppercase(),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
             style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

@@ -1,16 +1,21 @@
 package com.indie.shiftledger.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Alarm
@@ -19,7 +24,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.JobRecord
@@ -217,7 +222,7 @@ private fun JobPipelineCard(
             style = MaterialTheme.typography.bodyMedium,
         )
         Text(
-            text = "${formatShortDate(job.date)}  •  ${job.timeWindowLabel}",
+            text = "${formatShortDate(job.date)}  •  ${job.scheduleSummary}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -250,7 +255,11 @@ private fun JobPipelineCard(
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             ActionPill(
                 icon = Icons.Rounded.PictureAsPdf,
                 label = if (job.invoiceStatus.isOutstanding) "Send PDF" else "PDF",
@@ -292,25 +301,30 @@ private fun ActionPill(
     tint: Color = MaterialTheme.colorScheme.primary,
 ) {
     Surface(
+        modifier = Modifier
+            .widthIn(min = 88.dp)
+            .heightIn(min = 42.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(999.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
     ) {
         Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            IconButton(onClick = onClick) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = tint,
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+            )
             Text(
                 text = label,
-                modifier = Modifier.padding(end = 12.dp),
                 style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

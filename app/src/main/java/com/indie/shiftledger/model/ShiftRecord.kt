@@ -13,6 +13,8 @@ data class JobRecord(
     val startTime: LocalTime,
     val endTime: LocalTime,
     val laborRate: Double,
+    val pricingMode: PricingMode = PricingMode.Hourly,
+    val fixedPrice: Double = 0.0,
     val materialsBilled: Double,
     val calloutFee: Double,
     val extraCharge: Double,
@@ -31,7 +33,10 @@ data class JobRecord(
         get() = durationMinutes / 60.0
 
     val laborTotal: Double
-        get() = durationHours * laborRate
+        get() = if (pricingMode == PricingMode.Fixed) fixedPrice else durationHours * laborRate
+
+    val baseChargeLabel: String
+        get() = pricingMode.summaryLabel
 
     val invoiceTotal: Double
         get() = laborTotal + materialsBilled + calloutFee + extraCharge
@@ -47,6 +52,9 @@ data class JobRecord(
 
     val timeWindowLabel: String
         get() = "${formatClock(startTime)} - ${formatClock(endTime)}"
+
+    val scheduleSummary: String
+        get() = if (pricingMode == PricingMode.Fixed) "Fixed price" else timeWindowLabel
 
     val headline: String
         get() = "$jobName for $clientName"

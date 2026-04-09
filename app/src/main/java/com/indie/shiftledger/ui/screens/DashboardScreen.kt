@@ -330,7 +330,7 @@ private fun RecentWorkCard(
             style = MaterialTheme.typography.titleLarge,
         )
         Text(
-            text = "Profit ${formatCurrency(job.estimatedProfit, currency)}  •  ${job.timeWindowLabel}",
+            text = "Profit ${formatCurrency(job.estimatedProfit, currency)}  •  ${job.scheduleSummary}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

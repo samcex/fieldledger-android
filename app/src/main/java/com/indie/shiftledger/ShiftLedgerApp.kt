@@ -189,7 +189,12 @@ fun FieldLedgerApp(
                             currency = uiState.currency,
                             onExport = { job ->
                                 runCatching {
-                                    val pdfFile = invoiceExporter.export(job, uiState.currency)
+                                    val pdfFile = invoiceExporter.export(
+                                        job = job,
+                                        currency = uiState.currency,
+                                        companyName = uiState.companyName,
+                                        logoUri = uiState.logoUri,
+                                    )
                                     InvoiceShareLauncher.share(context, pdfFile)
                                     viewModel.markInvoiceSent(job.id, notify = false)
                                     viewModel.showMessage("Invoice PDF ready to send.")
@@ -223,8 +228,12 @@ fun FieldLedgerApp(
                             contentPadding = contentPadding,
                             currency = uiState.currency,
                             themeMode = uiState.themeMode,
+                            companyName = uiState.companyName,
+                            logoUri = uiState.logoUri,
                             onCurrencySelected = viewModel::updateCurrency,
                             onThemeModeChanged = viewModel::updateThemeMode,
+                            onCompanyNameChanged = viewModel::updateCompanyName,
+                            onLogoUriChanged = viewModel::updateLogoUri,
                         )
                     }
                 }

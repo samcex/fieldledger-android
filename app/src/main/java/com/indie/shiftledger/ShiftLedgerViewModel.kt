@@ -45,6 +45,8 @@ class FieldLedgerViewModel(
         settingsRepository.currency,
         settingsRepository.onboardingComplete,
         settingsRepository.themeMode,
+        settingsRepository.companyName,
+        settingsRepository.logoUri,
         selectedTab,
         draft,
         snackMessage,
@@ -55,9 +57,11 @@ class FieldLedgerViewModel(
         val currency = values[2] as CurrencyOption
         val onboardingComplete = values[3] as Boolean
         val themeMode = values[4] as ThemeMode
-        val tab = values[5] as FieldLedgerTab
-        val currentDraft = values[6] as JobDraft
-        val message = values[7] as String?
+        val companyName = values[5] as String
+        val logoUri = values[6] as String?
+        val tab = values[7] as FieldLedgerTab
+        val currentDraft = values[8] as JobDraft
+        val message = values[9] as String?
 
         FieldLedgerUiState(
             jobs = jobs,
@@ -65,6 +69,8 @@ class FieldLedgerViewModel(
             billing = billing,
             currency = currency,
             themeMode = themeMode,
+            companyName = companyName,
+            logoUri = logoUri,
             showOnboarding = !onboardingComplete,
             selectedTab = tab,
             draft = currentDraft,
@@ -99,6 +105,14 @@ class FieldLedgerViewModel(
     fun updateThemeMode(themeMode: ThemeMode) {
         settingsRepository.updateThemeMode(themeMode)
         snackMessage.value = "${themeMode.label} enabled."
+    }
+
+    fun updateCompanyName(companyName: String) {
+        settingsRepository.updateCompanyName(companyName)
+    }
+
+    fun updateLogoUri(logoUri: String?) {
+        settingsRepository.updateLogoUri(logoUri)
     }
 
     fun showMessage(message: String) {
@@ -275,6 +289,8 @@ data class FieldLedgerUiState(
     val billing: BillingUiState = BillingUiState(),
     val currency: CurrencyOption = CurrencyOption.USD,
     val themeMode: ThemeMode = ThemeMode.Light,
+    val companyName: String = "",
+    val logoUri: String? = null,
     val showOnboarding: Boolean = true,
     val selectedTab: FieldLedgerTab = FieldLedgerTab.Dashboard,
     val draft: JobDraft = JobDraft(),

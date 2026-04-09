@@ -42,6 +42,7 @@ import com.indie.shiftledger.billing.BillingUiState
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.InvoiceStatus
 import com.indie.shiftledger.model.JobDraft
+import com.indie.shiftledger.model.PricingMode
 import com.indie.shiftledger.model.formatCurrency
 import com.indie.shiftledger.model.formatHours
 import com.indie.shiftledger.model.preview
@@ -54,6 +55,7 @@ import com.indie.shiftledger.ui.theme.ledgerTextFieldColors
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.Locale
 
 @Composable
 fun JobFormScreen(
@@ -117,7 +119,14 @@ fun JobFormScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     DraftHeroMetric(label = "Profit", value = formatCurrency(preview.estimatedProfit, currency))
-                    DraftHeroMetric(label = "Hours", value = formatHours(preview.hours))
+                    DraftHeroMetric(
+                        label = if (draft.pricingMode == PricingMode.Fixed) "Base" else "Hours",
+                        value = if (draft.pricingMode == PricingMode.Fixed) {
+                            formatCurrency(preview.laborTotal, currency)
+                        } else {
+                            formatHours(preview.hours)
+                        },
+                    )
                     DraftHeroMetric(label = "Stage", value = draft.status.label)
                 }
             }
@@ -133,7 +142,11 @@ fun JobFormScreen(
                     LedgerMetricTile(
                         label = "Invoice total",
                         value = formatCurrency(preview.invoiceTotal, currency),
-                        supporting = "Labor, materials, callout, and extras",
+                        supporting = if (draft.pricingMode == PricingMode.Fixed) {
+                            "Job price, materials, callout, and extras"
+                        } else {
+                            "Labor, materials, callout, and extras"
+                        },
                     )
                     LedgerMetricTile(
                         label = "Total costs",
@@ -156,6 +169,51 @@ fun JobFormScreen(
                 title = "1. Basic details",
                 subtitle = "Start with the fields most jobs need.",
             ) {
+                Text(
+                    text = "How are you charging for this job?",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PricingMode.entries.forEach { pricingMode ->
+                        FilterChip(
+                            selected = draft.pricingMode == pricingMode,
+                            onClick = {
+                                onDraftChange {
+                                    it.copy(
+                                        pricingMode = pricingMode,
+                                        fixedPriceText = if (
+                                            pricingMode == PricingMode.Fixed &&
+                                            it.fixedPriceText.isBlank()
+                                        ) {
+                                            preview.laborTotal.toMoneyInput()
+                                        } else {
+                                            it.fixedPriceText
+                                        },
+                                    )
+                                }
+                            },
+                            label = { Text(pricingMode.label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                            shape = RoundedCornerShape(18.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = if (draft.pricingMode == PricingMode.Fixed) {
+                        "Use one total amount when the customer is paying a single agreed price."
+                    } else {
+                        "Use an hourly rate and the start and end time to calculate the invoice."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 FormField(
                     label = "Customer name",
                     value = draft.clientName,
@@ -175,9 +233,21 @@ fun JobFormScreen(
                     )
                     FormField(
                         modifier = Modifier.weight(1f),
-                        label = "Hourly rate",
-                        value = draft.laborRateText,
-                        onValueChange = { value -> onDraftChange { it.copy(laborRateText = value) } },
+                        label = draft.pricingMode.inputLabel,
+                        value = if (draft.pricingMode == PricingMode.Fixed) {
+                            draft.fixedPriceText
+                        } else {
+                            draft.laborRateText
+                        },
+                        onValueChange = { value ->
+                            onDraftChange {
+                                if (draft.pricingMode == PricingMode.Fixed) {
+                                    it.copy(fixedPriceText = value)
+                                } else {
+                                    it.copy(laborRateText = value)
+                                }
+                            }
+                        },
                         keyboardType = KeyboardType.Decimal,
                     )
                 }
@@ -193,6 +263,13 @@ fun JobFormScreen(
                         label = "End time",
                         value = draft.endTimeText,
                         onValueChange = { value -> onDraftChange { it.copy(endTimeText = value) } },
+                    )
+                }
+                if (draft.pricingMode == PricingMode.Fixed) {
+                    Text(
+                        text = "Time stays on the job record, but the invoice uses the fixed job price.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 OptionalToggleChip(
@@ -481,6 +558,12 @@ private fun hasMoneyValue(rawValue: String): Boolean {
         "", "0", "0.0", "0.00" -> false
         else -> true
     }
+}
+
+private fun Double.toMoneyInput(): String {
+    if (this <= 0.0) return ""
+    val formatted = String.format(Locale.US, "%.2f", this)
+    return formatted.trimEnd('0').trimEnd('.')
 }
 
 @Composable
