@@ -1,5 +1,6 @@
 package com.indie.shiftledger.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,15 +13,28 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -37,6 +51,9 @@ import com.indie.shiftledger.ui.theme.LedgerPanel
 import com.indie.shiftledger.ui.theme.LedgerPill
 import com.indie.shiftledger.ui.theme.LedgerSectionHeader
 import com.indie.shiftledger.ui.theme.ledgerTextFieldColors
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Composable
 fun JobFormScreen(
@@ -54,6 +71,22 @@ fun JobFormScreen(
 ) {
     val preview = draft.preview()
     val limitReached = !billing.isPro && remainingFreeEntries == 0
+    var showJobDetails by rememberSaveable {
+        mutableStateOf(draft.siteAddress.isNotBlank() || draft.workSummary.isNotBlank())
+    }
+    var showMoreAmounts by rememberSaveable {
+        mutableStateOf(
+            hasMoneyValue(draft.extraChargeText) ||
+                hasMoneyValue(draft.materialsCostText) ||
+                hasMoneyValue(draft.travelCostText),
+        )
+    }
+    var showDueDate by rememberSaveable {
+        mutableStateOf(draft.dueDateText.isNotBlank())
+    }
+    var showReminder by rememberSaveable {
+        mutableStateOf(draft.reminderDateText.isNotBlank() || draft.reminderNote.isNotBlank())
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -64,7 +97,7 @@ fun JobFormScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = "Job draft",
+                    label = "New job",
                     containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f),
                     contentColor = androidx.compose.ui.graphics.Color.White,
                 )
@@ -74,7 +107,7 @@ fun JobFormScreen(
                     color = androidx.compose.ui.graphics.Color.White,
                 )
                 Text(
-                    text = "Capture the work like a paper ledger: customer, time, billables, and follow-up all on one clean form.",
+                    text = "Add the customer, amount, and reminder in a few simple steps.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f),
                 )
@@ -93,8 +126,8 @@ fun JobFormScreen(
         item {
             LedgerPanel {
                 LedgerSectionHeader(
-                    title = "Capture status",
-                    body = "Keep the financial picture visible while you fill the form.",
+                    title = "Summary",
+                    body = "Check the total while you fill in the job.",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LedgerMetricTile(
@@ -120,48 +153,29 @@ fun JobFormScreen(
 
         item {
             FormSection(
-                title = "1. Work details",
-                subtitle = "The customer, the job, and the notes you will care about when the invoice is due.",
+                title = "1. Basic details",
+                subtitle = "Start with the fields most jobs need.",
             ) {
                 FormField(
-                    label = "Customer",
+                    label = "Customer name",
                     value = draft.clientName,
                     onValueChange = { value -> onDraftChange { it.copy(clientName = value) } },
                 )
                 FormField(
-                    label = "Job or service",
+                    label = "Job name",
                     value = draft.jobName,
                     onValueChange = { value -> onDraftChange { it.copy(jobName = value) } },
                 )
-                FormField(
-                    label = "Site address",
-                    value = draft.siteAddress,
-                    onValueChange = { value -> onDraftChange { it.copy(siteAddress = value) } },
-                )
-                FormField(
-                    label = "Work summary",
-                    value = draft.workSummary,
-                    onValueChange = { value -> onDraftChange { it.copy(workSummary = value) } },
-                    minLines = 4,
-                )
-            }
-        }
-
-        item {
-            FormSection(
-                title = "2. Time and labor",
-                subtitle = "Set the work window and the labor rate that drives the draft total.",
-            ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FormField(
+                    DatePickerField(
                         modifier = Modifier.weight(1f),
-                        label = "Date",
+                        label = "Work date",
                         value = draft.dateText,
                         onValueChange = { value -> onDraftChange { it.copy(dateText = value) } },
                     )
                     FormField(
                         modifier = Modifier.weight(1f),
-                        label = "Labor rate",
+                        label = "Hourly rate",
                         value = draft.laborRateText,
                         onValueChange = { value -> onDraftChange { it.copy(laborRateText = value) } },
                         keyboardType = KeyboardType.Decimal,
@@ -181,18 +195,36 @@ fun JobFormScreen(
                         onValueChange = { value -> onDraftChange { it.copy(endTimeText = value) } },
                     )
                 }
+                OptionalToggleChip(
+                    label = if (showJobDetails) "Hide address and notes" else "Add address and notes",
+                    selected = showJobDetails,
+                    onClick = { showJobDetails = !showJobDetails },
+                )
+                if (showJobDetails) {
+                    FormField(
+                        label = "Address",
+                        value = draft.siteAddress,
+                        onValueChange = { value -> onDraftChange { it.copy(siteAddress = value) } },
+                    )
+                    FormField(
+                        label = "Notes",
+                        value = draft.workSummary,
+                        onValueChange = { value -> onDraftChange { it.copy(workSummary = value) } },
+                        minLines = 4,
+                    )
+                }
             }
         }
 
         item {
             FormSection(
-                title = "3. Billable items",
-                subtitle = "Separate what you charge from what the job actually costs you.",
+                title = "2. Amounts",
+                subtitle = "Enter what you will charge for this job.",
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FormField(
                         modifier = Modifier.weight(1f),
-                        label = "Materials billed",
+                        label = "Materials to charge",
                         value = draft.materialsBilledText,
                         onValueChange = { value -> onDraftChange { it.copy(materialsBilledText = value) } },
                         keyboardType = KeyboardType.Decimal,
@@ -205,35 +237,42 @@ fun JobFormScreen(
                         keyboardType = KeyboardType.Decimal,
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OptionalToggleChip(
+                    label = if (showMoreAmounts) "Hide extra amounts" else "Add extra amounts",
+                    selected = showMoreAmounts,
+                    onClick = { showMoreAmounts = !showMoreAmounts },
+                )
+                if (showMoreAmounts) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        FormField(
+                            modifier = Modifier.weight(1f),
+                            label = "Extra charge",
+                            value = draft.extraChargeText,
+                            onValueChange = { value -> onDraftChange { it.copy(extraChargeText = value) } },
+                            keyboardType = KeyboardType.Decimal,
+                        )
+                        FormField(
+                            modifier = Modifier.weight(1f),
+                            label = "Materials cost",
+                            value = draft.materialsCostText,
+                            onValueChange = { value -> onDraftChange { it.copy(materialsCostText = value) } },
+                            keyboardType = KeyboardType.Decimal,
+                        )
+                    }
                     FormField(
-                        modifier = Modifier.weight(1f),
-                        label = "Extra charge",
-                        value = draft.extraChargeText,
-                        onValueChange = { value -> onDraftChange { it.copy(extraChargeText = value) } },
-                        keyboardType = KeyboardType.Decimal,
-                    )
-                    FormField(
-                        modifier = Modifier.weight(1f),
-                        label = "Materials cost",
-                        value = draft.materialsCostText,
-                        onValueChange = { value -> onDraftChange { it.copy(materialsCostText = value) } },
+                        label = "Travel cost",
+                        value = draft.travelCostText,
+                        onValueChange = { value -> onDraftChange { it.copy(travelCostText = value) } },
                         keyboardType = KeyboardType.Decimal,
                     )
                 }
-                FormField(
-                    label = "Travel cost",
-                    value = draft.travelCostText,
-                    onValueChange = { value -> onDraftChange { it.copy(travelCostText = value) } },
-                    keyboardType = KeyboardType.Decimal,
-                )
             }
         }
 
         item {
             FormSection(
-                title = "4. Follow-up and status",
-                subtitle = "Choose the invoice stage and set due or reminder dates before the job goes cold.",
+                title = "3. Invoice",
+                subtitle = "Set the job status and add dates only if you need them.",
             ) {
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -252,26 +291,43 @@ fun JobFormScreen(
                         )
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FormField(
-                        modifier = Modifier.weight(1f),
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OptionalToggleChip(
+                        label = if (showDueDate) "Hide due date" else "Add due date",
+                        selected = showDueDate,
+                        onClick = { showDueDate = !showDueDate },
+                    )
+                    if (draft.status.isOutstanding) {
+                        OptionalToggleChip(
+                            label = if (showReminder) "Hide reminder" else "Add reminder",
+                            selected = showReminder,
+                            onClick = { showReminder = !showReminder },
+                        )
+                    }
+                }
+                if (showDueDate) {
+                    DatePickerField(
                         label = "Due date",
                         value = draft.dueDateText,
                         onValueChange = { value -> onDraftChange { it.copy(dueDateText = value) } },
                     )
-                    FormField(
-                        modifier = Modifier.weight(1f),
+                }
+                if (draft.status.isOutstanding && showReminder) {
+                    DatePickerField(
                         label = "Reminder date",
                         value = draft.reminderDateText,
                         onValueChange = { value -> onDraftChange { it.copy(reminderDateText = value) } },
                     )
+                    FormField(
+                        label = "Reminder note",
+                        value = draft.reminderNote,
+                        onValueChange = { value -> onDraftChange { it.copy(reminderNote = value) } },
+                        minLines = 3,
+                    )
                 }
-                FormField(
-                    label = "Reminder note",
-                    value = draft.reminderNote,
-                    onValueChange = { value -> onDraftChange { it.copy(reminderNote = value) } },
-                    minLines = 3,
-                )
             }
         }
 
@@ -281,11 +337,11 @@ fun JobFormScreen(
                 borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
             ) {
                 LedgerSectionHeader(
-                    title = "Ready to save",
-                    body = "Review the money side one last time before this job becomes part of the ledger.",
+                    title = "Save job",
+                    body = "Check the main numbers before you save.",
                 )
                 Text(
-                    text = "Invoice ${formatCurrency(preview.invoiceTotal, currency)}  •  Costs ${formatCurrency(preview.totalCosts, currency)}  •  Profit ${formatCurrency(preview.estimatedProfit, currency)}",
+                    text = "Total ${formatCurrency(preview.invoiceTotal, currency)}  •  Costs ${formatCurrency(preview.totalCosts, currency)}  •  Profit ${formatCurrency(preview.estimatedProfit, currency)}",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
@@ -295,7 +351,7 @@ fun JobFormScreen(
                 )
                 if (limitReached) {
                     Text(
-                        text = "The starter plan limit is reached. Move to Pro to keep logging jobs.",
+                        text = "The free plan limit is reached. Move to Pro to keep saving jobs.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
@@ -308,6 +364,122 @@ fun JobFormScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DatePickerField(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    if (showDatePicker) {
+        val datePickerState = androidx.compose.material3.rememberDatePickerState(
+            initialSelectedDateMillis = value.toPickerDateMillis(),
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onValueChange(datePickerState.selectedDateMillis.toIsoDateText())
+                        showDatePicker = false
+                    },
+                ) {
+                    Text("Select")
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (value.isNotBlank()) {
+                        Text(
+                            text = "Clear",
+                            modifier = Modifier.clickable {
+                                onValueChange("")
+                                showDatePicker = false
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    Text(
+                        text = "Cancel",
+                        modifier = Modifier.clickable { showDatePicker = false },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            },
+        ) {
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false,
+            )
+        }
+    }
+
+    OutlinedTextField(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+            ) {
+                showDatePicker = true
+            },
+        value = value,
+        onValueChange = {},
+        readOnly = true,
+        interactionSource = interactionSource,
+        label = { Text(label) },
+        placeholder = { Text("Select date") },
+        trailingIcon = {
+            if (value.isBlank()) {
+                IconButton(onClick = { showDatePicker = true }) {
+                    Icon(
+                        imageVector = Icons.Rounded.CalendarMonth,
+                        contentDescription = "Choose $label",
+                    )
+                }
+            } else {
+                IconButton(onClick = { onValueChange("") }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Clear $label",
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(20.dp),
+        colors = ledgerTextFieldColors(),
+    )
+}
+
+private fun String.toPickerDateMillis(): Long? = runCatching {
+    LocalDate.parse(trim())
+        .atStartOfDay()
+        .toInstant(ZoneOffset.UTC)
+        .toEpochMilli()
+}.getOrNull()
+
+private fun Long?.toIsoDateText(): String {
+    if (this == null) return ""
+    return Instant.ofEpochMilli(this)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+        .toString()
+}
+
+private fun hasMoneyValue(rawValue: String): Boolean {
+    return when (rawValue.trim()) {
+        "", "0", "0.0", "0.00" -> false
+        else -> true
     }
 }
 
@@ -366,6 +538,24 @@ private fun FormSection(
             content = content,
         )
     }
+}
+
+@Composable
+private fun OptionalToggleChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ),
+        shape = RoundedCornerShape(18.dp),
+    )
 }
 
 @Composable

@@ -49,23 +49,23 @@ fun OnboardingScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = "Classic setup",
+                    label = "Quick setup",
                     containerColor = Color.White.copy(alpha = 0.18f),
                     contentColor = Color.White,
                 )
                 Text(
-                    text = "Track the job while you are still on site.",
+                    text = "Track jobs and invoices in one place.",
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                 )
                 Text(
-                    text = "ShiftLedger keeps invoicing, follow-up, and profit visible without turning the phone into a spreadsheet.",
+                    text = "Add jobs, see what is unpaid, and set reminders without turning your phone into a spreadsheet.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.92f),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OnboardingPill(label = "Jobs")
                     OnboardingPill(label = "Invoices")
-                    OnboardingPill(label = "Reminders")
                     OnboardingPill(label = currency.code)
                 }
             }
@@ -74,32 +74,32 @@ fun OnboardingScreen(
         item {
             FeatureCard(
                 icon = Icons.Rounded.PostAdd,
-                title = "Capture fast",
-                body = "Save the job, hours, costs, and notes before details drift or get lost in messages.",
+                title = "Save a job fast",
+                body = "Add the customer, time, and amount in a few taps.",
             )
         }
 
         item {
             FeatureCard(
                 icon = Icons.Rounded.Dashboard,
-                title = "Read the numbers",
-                body = "Weekly billed totals, profit, and outstanding work stay visible from the first saved job.",
+                title = "See what is unpaid",
+                body = "Home shows this week's total and any jobs still waiting on payment.",
             )
         }
 
         item {
             FeatureCard(
                 icon = Icons.Rounded.Notifications,
-                title = "Keep follow-ups moving",
-                body = "Due dates, reminders, and invoice export stop open work from quietly going cold.",
+                title = "Set reminders",
+                body = "Choose a due date and reminder when you need one.",
             )
         }
 
         item {
             LedgerPanel {
                 LedgerSectionHeader(
-                    title = "Choose your billing currency",
-                    body = "This sets how money is shown across the dashboard, draft preview, and ledger.",
+                    title = "Choose your currency",
+                    body = "You can change this later in Settings.",
                     trailing = {
                         Surface(
                             shape = MaterialTheme.shapes.medium,
@@ -142,7 +142,7 @@ fun OnboardingScreen(
                 onClick = onContinue,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Start tracking jobs")
+                Text("Continue")
             }
         }
     }

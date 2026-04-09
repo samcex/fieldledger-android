@@ -71,7 +71,7 @@ fun HistoryScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = "Ledger pipeline",
+                    label = "Jobs",
                     containerColor = Color.White.copy(alpha = 0.18f),
                     contentColor = Color.White,
                 )
@@ -81,7 +81,7 @@ fun HistoryScreen(
                     color = Color.White,
                 )
                 Text(
-                    text = "Outstanding work stays ahead of fully paid jobs so the next follow-up is obvious.",
+                    text = "Unpaid jobs stay at the top so they are easy to follow up.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.92f),
                 )
@@ -96,8 +96,8 @@ fun HistoryScreen(
         item {
             LedgerPanel {
                 LedgerSectionHeader(
-                    title = "Pipeline summary",
-                    body = "Use this view like a paper invoice tray: open items first, settled work after that.",
+                    title = "Summary",
+                    body = "A quick look at unpaid jobs and reminders.",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LedgerMetricTile(
@@ -106,9 +106,9 @@ fun HistoryScreen(
                         supporting = "Still open across quotes and invoices",
                     )
                     LedgerMetricTile(
-                        label = "Reminder load",
+                        label = "Reminders",
                         value = "${jobs.count { it.hasReminder }} active",
-                        supporting = "Jobs already scheduled for follow-up",
+                        supporting = "Jobs with a reminder set",
                     )
                 }
             }
@@ -116,11 +116,11 @@ fun HistoryScreen(
 
         item {
             LedgerSectionHeader(
-                title = "All jobs",
+                title = "Jobs",
                 body = if (displayJobs.isEmpty()) {
                     "No work has been saved yet."
                 } else {
-                    "Open jobs stay at the top. Export, remind, clear, or delete directly from each card."
+                    "Unpaid jobs stay at the top. You can share, remind, clear, or delete each job."
                 },
             )
         }
@@ -129,7 +129,7 @@ fun HistoryScreen(
             item {
                 LedgerEmptyCard(
                     title = "No jobs yet",
-                    body = "As soon as you save work, this page becomes your invoice queue with reminders and export actions.",
+                    body = "Save a job and it will show up here.",
                 )
             }
         } else {

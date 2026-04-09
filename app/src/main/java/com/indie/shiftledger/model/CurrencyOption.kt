@@ -36,6 +36,14 @@ enum class CurrencyOption(
             .setRegion("AU")
             .build(),
     ),
+    CHF(
+        code = "CHF",
+        label = "Swiss Franc",
+        locale = Locale.Builder()
+            .setLanguage("de")
+            .setRegion("CH")
+            .build(),
+    ),
     INR(
         code = "INR",
         label = "Indian Rupee",

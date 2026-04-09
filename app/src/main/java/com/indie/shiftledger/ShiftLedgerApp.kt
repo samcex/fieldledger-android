@@ -341,8 +341,8 @@ private fun FieldLedgerBottomBar(
     val items = remember {
         listOf(
             BottomBarItem(FieldLedgerTab.Dashboard, "Home", Icons.Rounded.Dashboard),
-            BottomBarItem(FieldLedgerTab.AddJob, "Capture", Icons.Rounded.PostAdd),
-            BottomBarItem(FieldLedgerTab.History, "Ledger", Icons.Rounded.History),
+            BottomBarItem(FieldLedgerTab.AddJob, "New", Icons.Rounded.PostAdd),
+            BottomBarItem(FieldLedgerTab.History, "Jobs", Icons.Rounded.History),
             BottomBarItem(FieldLedgerTab.Settings, "Settings", Icons.Rounded.Settings),
             BottomBarItem(FieldLedgerTab.Pro, "Pro", Icons.Rounded.Lock),
         )
@@ -439,28 +439,28 @@ private data class TabMeta(
 
 private fun tabMeta(selectedTab: FieldLedgerTab): TabMeta = when (selectedTab) {
     FieldLedgerTab.Dashboard -> TabMeta(
-        title = "Command overview",
-        subtitle = "Weekly totals, outstanding value, and your latest work.",
+        title = "Home",
+        subtitle = "This week, unpaid jobs, and recent work.",
     )
 
     FieldLedgerTab.AddJob -> TabMeta(
-        title = "Capture a job",
-        subtitle = "Log the work while the details are still fresh.",
+        title = "New job",
+        subtitle = "Add a job and save it in a minute.",
     )
 
     FieldLedgerTab.History -> TabMeta(
-        title = "Ledger and pipeline",
-        subtitle = "Invoices, reminders, export, and payment status.",
+        title = "Jobs",
+        subtitle = "Unpaid, paid, shared, and reminded jobs.",
     )
 
     FieldLedgerTab.Pro -> TabMeta(
-        title = "ShiftLedger Pro",
-        subtitle = "Plans, purchase state, and launch readiness.",
+        title = "Pro",
+        subtitle = "Plans and billing status.",
     )
 
     FieldLedgerTab.Settings -> TabMeta(
-        title = "Preferences",
-        subtitle = "Currency and display mode for this device.",
+        title = "Settings",
+        subtitle = "Currency and display mode.",
     )
 }
 

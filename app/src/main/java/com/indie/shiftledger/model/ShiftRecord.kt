@@ -64,7 +64,7 @@ enum class InvoiceStatus(
     val label: String,
     val isOutstanding: Boolean,
 ) {
-    DraftQuote(label = "Needs quote", isOutstanding = true),
-    InvoiceSent(label = "Invoice sent", isOutstanding = true),
+    DraftQuote(label = "Quote", isOutstanding = true),
+    InvoiceSent(label = "Sent", isOutstanding = true),
     Paid(label = "Paid", isOutstanding = false),
 }

@@ -62,7 +62,7 @@ fun DashboardScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = "Week to date",
+                    label = "This week",
                     containerColor = Color.White.copy(alpha = 0.18f),
                     contentColor = Color.White,
                 )
@@ -72,12 +72,12 @@ fun DashboardScreen(
                     color = Color.White,
                 )
                 Text(
-                    text = "Your live command view for billed work, profit, and open invoice pressure.",
+                    text = "See what you billed this week, what is unpaid, and your latest jobs.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.92f),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HeroPill(label = "${snapshot.followUpCount} open follow-ups")
+                    HeroPill(label = "${snapshot.followUpCount} unpaid")
                     HeroPill(label = "Top client ${snapshot.topClient}")
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -91,31 +91,31 @@ fun DashboardScreen(
         item {
             LedgerPanel {
                 LedgerSectionHeader(
-                    title = "Classic scorecard",
-                    body = "The four numbers that matter when you open the app between jobs.",
+                    title = "At a glance",
+                    body = "The main numbers most people check first.",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LedgerMetricTile(
-                        label = "30-day billed",
+                        label = "This month",
                         value = formatCurrency(snapshot.monthRevenue, currency),
-                        supporting = "Rolling month revenue",
+                        supporting = "Total billed in the last 30 days",
                     )
                     LedgerMetricTile(
                         label = "Average job",
                         value = formatCurrency(snapshot.averageJobValue, currency),
-                        supporting = "Useful when quoting similar work",
+                        supporting = "Helpful when pricing similar work",
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LedgerMetricTile(
-                        label = "Week costs",
+                        label = "Costs",
                         value = formatCurrency(snapshot.weekCosts, currency),
-                        supporting = "Materials and travel booked this week",
+                        supporting = "Materials and travel this week",
                     )
                     LedgerMetricTile(
-                        label = "Open pipeline",
-                        value = "${snapshot.followUpCount} jobs",
-                        supporting = "Quotes and invoices still to clear",
+                        label = "Unpaid jobs",
+                        value = "${snapshot.followUpCount}",
+                        supporting = "Jobs that still need follow-up",
                     )
                 }
             }
@@ -128,8 +128,8 @@ fun DashboardScreen(
                     borderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.32f),
                 ) {
                     LedgerSectionHeader(
-                        title = "Starter plan status",
-                        body = "You are using the free ledger. Pro removes the 15-job cap and unlocks the full workflow.",
+                        title = "Free plan",
+                        body = "You can save up to 15 jobs on the free plan.",
                         trailing = {
                             LedgerPill(
                                 label = "$remainingFreeEntries left",
@@ -138,11 +138,11 @@ fun DashboardScreen(
                         },
                     )
                     Text(
-                        text = "$jobCount jobs logged so far. Upgrade before the cap interrupts capture on site.",
+                        text = "$jobCount jobs saved so far.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
-                        Text("Review Pro plans")
+                        Text("See Pro plans")
                     }
                 }
             }
@@ -151,11 +151,11 @@ fun DashboardScreen(
         item {
             LedgerPanel {
                 LedgerSectionHeader(
-                    title = "Four-week revenue line",
+                    title = "Last 4 weeks",
                     body = if (billing.isPro) {
-                        "Compact revenue bars so you can see whether the book is tightening or building."
+                        "A simple view of how your weekly totals are moving."
                     } else {
-                        "Starter shows the framework. Pro unlocks the live four-week revenue view."
+                        "The free plan shows a preview. Pro unlocks the full chart."
                     },
                 )
                 if (billing.isPro) {
@@ -165,8 +165,8 @@ fun DashboardScreen(
                     )
                 } else {
                     LedgerEmptyCard(
-                        title = "Trend view locked",
-                        body = "Upgrade to Pro to track week-over-week movement and spot slowdowns before invoices stall.",
+                        title = "4-week chart locked",
+                        body = "Upgrade to Pro to see the full weekly trend.",
                     )
                 }
             }
@@ -174,11 +174,11 @@ fun DashboardScreen(
 
         item {
             LedgerSectionHeader(
-                title = "Latest work",
+                title = "Recent jobs",
                 body = if (recentJobs.isEmpty()) {
-                    "Save your first job and this becomes a live ledger of recent activity."
+                    "Save your first job and it will show up here."
                 } else {
-                    "Recent jobs with status, invoice amount, and time window in a cleaner ledger view."
+                    "Your latest saved jobs."
                 },
             )
         }
@@ -186,8 +186,8 @@ fun DashboardScreen(
         if (recentJobs.isEmpty()) {
             item {
                 LedgerEmptyCard(
-                    title = "No work logged yet",
-                    body = "Once a job is saved, ShiftLedger starts surfacing billed totals, margins, and due pressure automatically.",
+                    title = "No jobs yet",
+                    body = "Save your first job to see totals and unpaid jobs here.",
                 )
             }
         } else {

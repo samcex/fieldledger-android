@@ -47,7 +47,7 @@ fun SettingsScreen(
         item {
             LedgerHeroPanel {
                 LedgerPill(
-                    label = "Device setup",
+                    label = "Settings",
                     containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f),
                     contentColor = androidx.compose.ui.graphics.Color.White,
                 )
@@ -57,7 +57,7 @@ fun SettingsScreen(
                     color = androidx.compose.ui.graphics.Color.White,
                 )
                 Text(
-                    text = "Choose how money reads and whether the app runs in the warm ledger palette or dark night mode.",
+                    text = "Choose your currency and whether the app uses light or dark mode.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f),
                 )
@@ -71,8 +71,8 @@ fun SettingsScreen(
         item {
             LedgerPanel {
                 LedgerSectionHeader(
-                    title = "Money formatting",
-                    body = "Currency updates every screen immediately, including the dashboard, form preview, and history totals.",
+                    title = "Currency",
+                    body = "This changes how money is shown across the app.",
                 )
                 Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -102,7 +102,7 @@ fun SettingsScreen(
             LedgerPanel {
                 LedgerSectionHeader(
                     title = "Appearance",
-                    body = "Switch between the warm classic palette and the darker OLED-leaning mode.",
+                    body = "Use light mode or dark mode.",
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -116,9 +116,9 @@ fun SettingsScreen(
                         Text(text = "Color mode", style = MaterialTheme.typography.titleMedium)
                         Text(
                             text = if (themeMode == ThemeMode.AmoledDark) {
-                                "Night mode deepens contrast and uses darker surfaces."
+                                "Dark mode uses black backgrounds and brighter text."
                             } else {
-                                "Classic mode keeps the lighter paper-style palette."
+                                "Light mode uses white backgrounds and black text."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -143,8 +143,8 @@ fun SettingsScreen(
 
         item {
             LedgerSectionHeader(
-                title = "Available currencies",
-                body = "Pick the display currency you want this device to use.",
+                title = "Currencies",
+                body = "Pick the currency you want to use on this device.",
             )
         }
 
@@ -160,13 +160,13 @@ fun SettingsScreen(
             LedgerPanel {
                 LedgerSectionHeader(
                     title = "Preview",
-                    body = "A quick sense check for how the chosen currency reads in the app.",
+                    body = "A quick preview of how amounts will look.",
                 )
                 Text(text = "Revenue ${formatCurrency(3210.40, currency)}", style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Costs ${formatCurrency(685.10, currency)}", style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Profit ${formatCurrency(2525.30, currency)}", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    text = "Currency formatting is saved locally on this device.",
+                    text = "These settings are saved on this device.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
