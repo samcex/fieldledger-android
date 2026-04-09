@@ -47,11 +47,11 @@ class InvoicePdfExporter(
         }
 
         var y = 70f
-        canvas.drawText("FieldLedger Invoice Summary", 40f, y, titlePaint)
+        canvas.drawText("FieldLedger Invoice", 40f, y, titlePaint)
         y += 28f
         canvas.drawText("Prepared for ${job.clientName}", 40f, y, bodyPaint)
         y += 18f
-        canvas.drawText("Generated from saved job data", 40f, y, bodyMutedPaint)
+        canvas.drawText("PDF invoice generated from saved job details", 40f, y, bodyMutedPaint)
 
         y += 42f
         canvas.drawText("Job details", 40f, y, headingPaint)

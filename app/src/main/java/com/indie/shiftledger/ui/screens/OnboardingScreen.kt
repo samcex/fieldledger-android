@@ -1,6 +1,5 @@
 package com.indie.shiftledger.ui.screens
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,15 +7,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PostAdd
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -114,22 +110,11 @@ fun OnboardingScreen(
                         }
                     },
                 )
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    CurrencyOption.entries.forEach { option ->
-                        FilterChip(
-                            selected = option == currency,
-                            onClick = { onCurrencySelected(option) },
-                            label = { Text(option.code) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            ),
-                        )
-                    }
-                }
+                CurrencyPicker(
+                    label = "Currency",
+                    selected = currency,
+                    onSelect = onCurrencySelected,
+                )
                 Text(
                     text = "Current selection: ${currency.displayLabel}",
                     style = MaterialTheme.typography.bodyMedium,

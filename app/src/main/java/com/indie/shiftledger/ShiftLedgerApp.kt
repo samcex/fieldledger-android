@@ -191,12 +191,15 @@ fun FieldLedgerApp(
                                 runCatching {
                                     val pdfFile = invoiceExporter.export(job, uiState.currency)
                                     InvoiceShareLauncher.share(context, pdfFile)
+                                    viewModel.markInvoiceSent(job.id, notify = false)
+                                    viewModel.showMessage("Invoice PDF ready to send.")
                                 }.onFailure {
                                     viewModel.showMessage("Could not export invoice PDF.")
                                 }
                             },
                             onScheduleReminder = viewModel::scheduleReminderTomorrow,
                             onClearReminder = viewModel::clearReminder,
+                            onMarkPaid = viewModel::markJobPaid,
                             onDelete = viewModel::deleteJob,
                         )
 

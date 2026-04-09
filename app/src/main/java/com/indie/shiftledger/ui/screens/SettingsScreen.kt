@@ -1,7 +1,6 @@
 package com.indie.shiftledger.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,9 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -95,6 +92,11 @@ fun SettingsScreen(
                         )
                     }
                 }
+                CurrencyPicker(
+                    label = "Currency",
+                    selected = currency,
+                    onSelect = onCurrencySelected,
+                )
             }
         }
 
@@ -142,21 +144,6 @@ fun SettingsScreen(
         }
 
         item {
-            LedgerSectionHeader(
-                title = "Currencies",
-                body = "Pick the currency you want to use on this device.",
-            )
-        }
-
-        items(CurrencyOption.entries, key = { it.code }) { option ->
-            CurrencyOptionCard(
-                option = option,
-                selected = option == currency,
-                onSelect = { onCurrencySelected(option) },
-            )
-        }
-
-        item {
             LedgerPanel {
                 LedgerSectionHeader(
                     title = "Preview",
@@ -184,56 +171,4 @@ private fun PreferenceHeroPill(
         containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.16f),
         contentColor = androidx.compose.ui.graphics.Color.White,
     )
-}
-
-@Composable
-private fun CurrencyOptionCard(
-    option: CurrencyOption,
-    selected: Boolean,
-    onSelect: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSelect),
-        color = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(
-            1.dp,
-            if (selected) {
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f)
-            } else {
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)
-            },
-        ),
-        shadowElevation = 6.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(
-                selected = selected,
-                onClick = onSelect,
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(text = option.displayLabel, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    text = "Symbol ${option.symbol}  •  Code ${option.code}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
 }

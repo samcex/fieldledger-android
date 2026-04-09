@@ -13,6 +13,7 @@ import com.indie.shiftledger.data.SettingsRepository
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.DashboardSnapshot
 import com.indie.shiftledger.model.DisplayOffer
+import com.indie.shiftledger.model.InvoiceStatus
 import com.indie.shiftledger.model.JobDraft
 import com.indie.shiftledger.model.JobRecord
 import com.indie.shiftledger.model.MonetizationPlan
@@ -175,6 +176,48 @@ class FieldLedgerViewModel(
             )
             reminderScheduler.sync(savedJob)
             snackMessage.value = "Reminder cleared."
+        }
+    }
+
+    fun markJobPaid(id: Long) {
+        val existingJob = uiState.value.jobs.firstOrNull { it.id == id } ?: return
+        if (existingJob.invoiceStatus == InvoiceStatus.Paid) {
+            snackMessage.value = "Job is already marked paid."
+            return
+        }
+
+        viewModelScope.launch {
+            val savedJob = jobRepository.save(
+                existingJob.copy(
+                    invoiceStatus = InvoiceStatus.Paid,
+                    reminderDate = null,
+                    reminderNote = "",
+                ),
+            )
+            reminderScheduler.sync(savedJob)
+            snackMessage.value = "Job marked paid."
+        }
+    }
+
+    fun markInvoiceSent(id: Long, notify: Boolean = true) {
+        val existingJob = uiState.value.jobs.firstOrNull { it.id == id } ?: return
+        if (existingJob.invoiceStatus == InvoiceStatus.Paid) return
+        if (existingJob.invoiceStatus == InvoiceStatus.InvoiceSent) {
+            if (notify) {
+                snackMessage.value = "Invoice is already marked sent."
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            jobRepository.save(
+                existingJob.copy(
+                    invoiceStatus = InvoiceStatus.InvoiceSent,
+                ),
+            )
+            if (notify) {
+                snackMessage.value = "Invoice marked sent."
+            }
         }
     }
 

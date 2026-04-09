@@ -15,8 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.AlarmOff
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +50,7 @@ fun HistoryScreen(
     onExport: (JobRecord) -> Unit,
     onScheduleReminder: (Long) -> Unit,
     onClearReminder: (Long) -> Unit,
+    onMarkPaid: (Long) -> Unit,
     onDelete: (Long) -> Unit,
 ) {
     val openJobs = jobs.count { it.invoiceStatus.isOutstanding }
@@ -140,6 +142,7 @@ fun HistoryScreen(
                     onExport = onExport,
                     onScheduleReminder = onScheduleReminder,
                     onClearReminder = onClearReminder,
+                    onMarkPaid = onMarkPaid,
                     onDelete = onDelete,
                 )
             }
@@ -182,6 +185,7 @@ private fun JobPipelineCard(
     onExport: (JobRecord) -> Unit,
     onScheduleReminder: (Long) -> Unit,
     onClearReminder: (Long) -> Unit,
+    onMarkPaid: (Long) -> Unit,
     onDelete: (Long) -> Unit,
 ) {
     LedgerPanel {
@@ -248,8 +252,8 @@ private fun JobPipelineCard(
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionPill(
-                icon = Icons.Rounded.Share,
-                label = "Export",
+                icon = Icons.Rounded.PictureAsPdf,
+                label = if (job.invoiceStatus.isOutstanding) "Send PDF" else "PDF",
                 onClick = { onExport(job) },
             )
             if (job.invoiceStatus.isOutstanding) {
@@ -263,6 +267,11 @@ private fun JobPipelineCard(
                             onScheduleReminder(job.id)
                         }
                     },
+                )
+                ActionPill(
+                    icon = Icons.Rounded.CheckCircle,
+                    label = "Paid",
+                    onClick = { onMarkPaid(job.id) },
                 )
             }
             ActionPill(
