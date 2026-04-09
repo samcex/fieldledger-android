@@ -7,12 +7,12 @@ enum class ThemeMode(
 ) {
     Light(
         storageValue = "light",
-        label = "Light",
+        label = "Classic Light",
         isDark = false,
     ),
     AmoledDark(
         storageValue = "amoled_dark",
-        label = "AMOLED Dark",
+        label = "Night Ledger",
         isDark = true,
     ),
     ;

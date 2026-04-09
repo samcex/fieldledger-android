@@ -1,6 +1,5 @@
 package com.indie.shiftledger.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,25 +15,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.indie.shiftledger.billing.BillingUiState
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.DashboardSnapshot
 import com.indie.shiftledger.model.JobRecord
+import com.indie.shiftledger.model.WeeklyRevenue
 import com.indie.shiftledger.model.formatCurrency
 import com.indie.shiftledger.model.formatHours
 import com.indie.shiftledger.model.formatShortDate
+import com.indie.shiftledger.ui.theme.LedgerEmptyCard
+import com.indie.shiftledger.ui.theme.LedgerHeroPanel
+import com.indie.shiftledger.ui.theme.LedgerMetricTile
+import com.indie.shiftledger.ui.theme.LedgerPanel
+import com.indie.shiftledger.ui.theme.LedgerPill
+import com.indie.shiftledger.ui.theme.LedgerSectionHeader
 
 @Composable
 fun DashboardScreen(
@@ -54,411 +57,291 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            RevenueHero(snapshot = snapshot, currency = currency)
-        }
-
-        item {
-            PulseBoard(snapshot = snapshot, currency = currency)
-        }
-
-        if (!billing.isPro) {
-            item {
-                UpgradePromptCard(
-                    jobCount = jobCount,
-                    remainingFreeEntries = remainingFreeEntries,
-                    onOpenPro = onOpenPro,
+            LedgerHeroPanel {
+                LedgerPill(
+                    label = "Week to date",
+                    containerColor = Color.White.copy(alpha = 0.18f),
+                    contentColor = Color.White,
                 )
+                Text(
+                    text = formatCurrency(snapshot.weekRevenue, currency),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White,
+                )
+                Text(
+                    text = "Your live command view for billed work, profit, and open invoice pressure.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.92f),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HeroPill(label = "${snapshot.followUpCount} open follow-ups")
+                    HeroPill(label = "Top client ${snapshot.topClient}")
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HeroMetric(label = "Profit", value = formatCurrency(snapshot.weekProfit, currency))
+                    HeroMetric(label = "Hours", value = formatHours(snapshot.weekHours))
+                    HeroMetric(label = "Outstanding", value = formatCurrency(snapshot.unpaidAmount, currency))
+                }
             }
         }
 
         item {
-            TrendCard(
-                snapshot = snapshot,
-                currency = currency,
-                locked = !billing.isPro,
-                onOpenPro = onOpenPro,
-            )
+            LedgerPanel {
+                LedgerSectionHeader(
+                    title = "Classic scorecard",
+                    body = "The four numbers that matter when you open the app between jobs.",
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LedgerMetricTile(
+                        label = "30-day billed",
+                        value = formatCurrency(snapshot.monthRevenue, currency),
+                        supporting = "Rolling month revenue",
+                    )
+                    LedgerMetricTile(
+                        label = "Average job",
+                        value = formatCurrency(snapshot.averageJobValue, currency),
+                        supporting = "Useful when quoting similar work",
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LedgerMetricTile(
+                        label = "Week costs",
+                        value = formatCurrency(snapshot.weekCosts, currency),
+                        supporting = "Materials and travel booked this week",
+                    )
+                    LedgerMetricTile(
+                        label = "Open pipeline",
+                        value = "${snapshot.followUpCount} jobs",
+                        supporting = "Quotes and invoices still to clear",
+                    )
+                }
+            }
+        }
+
+        if (!billing.isPro) {
+            item {
+                LedgerPanel(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    borderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.32f),
+                ) {
+                    LedgerSectionHeader(
+                        title = "Starter plan status",
+                        body = "You are using the free ledger. Pro removes the 15-job cap and unlocks the full workflow.",
+                        trailing = {
+                            LedgerPill(
+                                label = "$remainingFreeEntries left",
+                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                            )
+                        },
+                    )
+                    Text(
+                        text = "$jobCount jobs logged so far. Upgrade before the cap interrupts capture on site.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
+                        Text("Review Pro plans")
+                    }
+                }
+            }
         }
 
         item {
-            SectionHeader(
-                title = "Latest work",
-                subtitle = if (recentJobs.isEmpty()) {
-                    "Save the first job and this screen turns into a working ledger."
+            LedgerPanel {
+                LedgerSectionHeader(
+                    title = "Four-week revenue line",
+                    body = if (billing.isPro) {
+                        "Compact revenue bars so you can see whether the book is tightening or building."
+                    } else {
+                        "Starter shows the framework. Pro unlocks the live four-week revenue view."
+                    },
+                )
+                if (billing.isPro) {
+                    TrendBoard(
+                        trend = snapshot.trend,
+                        currency = currency,
+                    )
                 } else {
-                    "The newest jobs with invoice value, status, and due pressure in one glance."
+                    LedgerEmptyCard(
+                        title = "Trend view locked",
+                        body = "Upgrade to Pro to track week-over-week movement and spot slowdowns before invoices stall.",
+                    )
+                }
+            }
+        }
+
+        item {
+            LedgerSectionHeader(
+                title = "Latest work",
+                body = if (recentJobs.isEmpty()) {
+                    "Save your first job and this becomes a live ledger of recent activity."
+                } else {
+                    "Recent jobs with status, invoice amount, and time window in a cleaner ledger view."
                 },
             )
         }
 
         if (recentJobs.isEmpty()) {
             item {
-                InfoCard(
-                    title = "Nothing logged yet",
-                    body = "Once you save a job, this screen starts surfacing billed totals, open follow-ups, and weekly momentum.",
+                LedgerEmptyCard(
+                    title = "No work logged yet",
+                    body = "Once a job is saved, ShiftLedger starts surfacing billed totals, margins, and due pressure automatically.",
                 )
             }
         } else {
             items(recentJobs, key = { it.id }) { job ->
-                RecentJobRow(job = job, currency = currency)
+                RecentWorkCard(
+                    job = job,
+                    currency = currency,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun RevenueHero(
-    snapshot: DashboardSnapshot,
-    currency: CurrencyOption,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.88f),
-                        MaterialTheme.colorScheme.secondary,
-                    ),
-                ),
-                shape = RoundedCornerShape(32.dp),
-            )
-            .padding(22.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(
-                text = "THIS WEEK",
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.78f),
-            )
-            Text(
-                text = formatCurrency(snapshot.weekRevenue, currency),
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
-            )
-            Text(
-                text = "Week-to-date billed work, with unpaid pressure and margin visible below.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.9f),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HeroTag(label = "Profit ${formatCurrency(snapshot.weekProfit, currency)}")
-                HeroTag(label = "${snapshot.followUpCount} follow-ups")
-            }
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color.White.copy(alpha = 0.14f),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    HeroMetric(label = "Outstanding", value = formatCurrency(snapshot.unpaidAmount, currency))
-                    HeroMetric(label = "Top client", value = snapshot.topClient)
-                    HeroMetric(label = "Hours", value = formatHours(snapshot.weekHours))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HeroTag(
+private fun HeroPill(
     label: String,
+) {
+    LedgerPill(
+        label = label,
+        containerColor = Color.White.copy(alpha = 0.16f),
+        contentColor = Color.White,
+    )
+}
+
+@Composable
+private fun RowScope.HeroMetric(
+    label: String,
+    value: String,
 ) {
     Surface(
-        color = Color.White.copy(alpha = 0.16f),
-        shape = RoundedCornerShape(999.dp),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
-        )
-    }
-}
-
-@Composable
-private fun HeroMetric(
-    label: String,
-    value: String,
-) {
-    Column(
-        modifier = Modifier.width(92.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.7f),
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleSmall,
-            color = Color.White,
-        )
-    }
-}
-
-@Composable
-private fun PulseBoard(
-    snapshot: DashboardSnapshot,
-    currency: CurrencyOption,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PulseTile(
-                label = "30-day billed",
-                value = formatCurrency(snapshot.monthRevenue, currency),
-                detail = "Recent volume across every saved job.",
-                containerColor = MaterialTheme.colorScheme.surface,
-            )
-            PulseTile(
-                label = "Average job",
-                value = formatCurrency(snapshot.averageJobValue, currency),
-                detail = "Useful when you quote similar work.",
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PulseTile(
-                label = "Week costs",
-                value = formatCurrency(snapshot.weekCosts, currency),
-                detail = "Materials and travel eating into margin.",
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            )
-            PulseTile(
-                label = "Open pressure",
-                value = "${snapshot.followUpCount} jobs",
-                detail = "Outstanding invoices and quotes still in play.",
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RowScope.PulseTile(
-    label: String,
-    value: String,
-    detail: String,
-    containerColor: Color,
-) {
-    Card(
         modifier = Modifier.weight(1f),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = RoundedCornerShape(24.dp),
+        color = Color.White.copy(alpha = 0.12f),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.75f),
             )
-            Text(text = value, style = MaterialTheme.typography.titleMedium)
             Text(
-                text = detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                color = Color.White,
             )
         }
     }
 }
 
 @Composable
-private fun UpgradePromptCard(
-    jobCount: Int,
-    remainingFreeEntries: Int,
-    onOpenPro: () -> Unit,
-) {
-    Card(
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(text = "Starter plan runway", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "You have logged $jobCount jobs. $remainingFreeEntries free jobs remain before unlimited logging moves behind Pro.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Button(onClick = onOpenPro) {
-                Text("See Pro pricing")
-            }
-        }
-    }
-}
-
-@Composable
-private fun TrendCard(
-    snapshot: DashboardSnapshot,
-    currency: CurrencyOption,
-    locked: Boolean,
-    onOpenPro: () -> Unit,
-) {
-    Card(
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(text = "Four-week momentum", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "A compact revenue view so you can tell whether the pipeline is tightening or climbing.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (locked) {
-                Text(
-                    text = "Unlock trend history and deeper outstanding analytics with Pro.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Button(onClick = onOpenPro) {
-                    Text("Unlock Pro")
-                }
-            } else {
-                TrendChart(snapshot = snapshot, currency = currency)
-            }
-        }
-    }
-}
-
-@Composable
-private fun TrendChart(
-    snapshot: DashboardSnapshot,
+private fun TrendBoard(
+    trend: List<WeeklyRevenue>,
     currency: CurrencyOption,
 ) {
-    val maxValue = snapshot.trend.maxOfOrNull { it.value.coerceAtLeast(0.0) }?.takeIf { it > 0.0 } ?: 1.0
-    val barColors = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.secondary,
-    )
+    val maxValue = trend.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(188.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Bottom,
     ) {
-        snapshot.trend.forEach { week ->
-            val ratio = (week.value / maxValue).toFloat().coerceIn(0.12f, 1f)
-            Column(
+        trend.forEach { week ->
+            val ratio = (week.value / maxValue).toFloat().coerceIn(0f, 1f)
+            val barHeight = (ratio * 120f).dp.coerceAtLeast(18.dp)
+            Surface(
                 modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.52f),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                ),
             ) {
-                Text(
-                    text = formatCurrency(week.value, currency),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                Canvas(
-                    modifier = Modifier
-                        .width(48.dp)
-                        .height((120 * ratio).dp),
+                Column(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    drawRoundRect(
-                        brush = Brush.verticalGradient(
-                            colors = barColors,
-                        ),
-                        cornerRadius = CornerRadius(26f, 26f),
+                    Box(
+                        modifier = Modifier
+                            .height(130.dp)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.BottomCenter,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(34.dp)
+                                .height(barHeight)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                ),
+                        )
+                    }
+                    Text(
+                        text = week.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = formatCurrency(week.value, currency),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Text(text = week.label, style = MaterialTheme.typography.labelMedium)
             }
         }
     }
 }
 
 @Composable
-private fun RecentJobRow(
+private fun RecentWorkCard(
     job: JobRecord,
     currency: CurrencyOption,
 ) {
-    Card(
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    LedgerPanel {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(text = job.jobName, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        text = job.clientName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                InvoiceStatusBadge(status = job.invoiceStatus)
+                Text(text = job.jobName, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = job.clientName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            InvoiceStatusBadge(status = job.invoiceStatus)
+        }
+
+        Text(
+            text = formatCurrency(job.invoiceTotal, currency),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Text(
+            text = "Profit ${formatCurrency(job.estimatedProfit, currency)}  •  ${job.timeWindowLabel}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = formatShortDate(job.date),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (job.workSummary.isNotBlank()) {
             Text(
-                text = formatCurrency(job.invoiceTotal, currency),
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Text(
-                text = "${formatShortDate(job.date)}  •  ${job.timeWindowLabel}",
+                text = job.workSummary,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                text = "Estimated profit ${formatCurrency(job.estimatedProfit, currency)}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SectionHeader(
-    title: String,
-    subtitle: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun InfoCard(
-    title: String,
-    body: String,
-) {
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall)
-            Text(text = body, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

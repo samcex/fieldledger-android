@@ -3,6 +3,7 @@ package com.indie.shiftledger.ui.screens
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -13,12 +14,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -31,6 +30,12 @@ import com.indie.shiftledger.model.JobDraft
 import com.indie.shiftledger.model.formatCurrency
 import com.indie.shiftledger.model.formatHours
 import com.indie.shiftledger.model.preview
+import com.indie.shiftledger.ui.theme.LedgerHeroPanel
+import com.indie.shiftledger.ui.theme.LedgerMetricTile
+import com.indie.shiftledger.ui.theme.LedgerPanel
+import com.indie.shiftledger.ui.theme.LedgerPill
+import com.indie.shiftledger.ui.theme.LedgerSectionHeader
+import com.indie.shiftledger.ui.theme.ledgerTextFieldColors
 
 @Composable
 fun JobFormScreen(
@@ -54,97 +59,104 @@ fun JobFormScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Card(
-                shape = RoundedCornerShape(32.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    Text(text = "Draft snapshot", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        text = "Keep the numbers visible while you capture the job. Date format is YYYY-MM-DD and time format is HH:MM.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        SummaryPill(label = "Currency ${currency.code}")
-                        SummaryPill(label = if (billing.isPro) "Pro active" else "$remainingFreeEntries free left")
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        DraftMetric(
-                            label = "Invoice",
-                            value = formatCurrency(preview.invoiceTotal, currency),
-                        )
-                        DraftMetric(
-                            label = "Profit",
-                            value = formatCurrency(preview.estimatedProfit, currency),
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        DraftMetric(
-                            label = "Hours",
-                            value = formatHours(preview.hours),
-                        )
-                        DraftMetric(
-                            label = "Stage",
-                            value = draft.status.label,
-                        )
-                    }
-                    if (!billing.isPro) {
-                        Text(
-                            text = "$jobCount of 15 starter jobs used.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+            LedgerHeroPanel {
+                LedgerPill(
+                    label = "Job draft",
+                    containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                )
+                Text(
+                    text = formatCurrency(preview.invoiceTotal, currency),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = androidx.compose.ui.graphics.Color.White,
+                )
+                Text(
+                    text = "Capture the work like a paper ledger: customer, time, billables, and follow-up all on one clean form.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HeroDraftPill(label = "Currency ${currency.code}")
+                    HeroDraftPill(label = if (billing.isPro) "Pro active" else "$remainingFreeEntries free left")
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DraftHeroMetric(label = "Profit", value = formatCurrency(preview.estimatedProfit, currency))
+                    DraftHeroMetric(label = "Hours", value = formatHours(preview.hours))
+                    DraftHeroMetric(label = "Stage", value = draft.status.label)
                 }
             }
         }
 
         item {
-            SectionCard(
+            LedgerPanel {
+                LedgerSectionHeader(
+                    title = "Capture status",
+                    body = "Keep the financial picture visible while you fill the form.",
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LedgerMetricTile(
+                        label = "Invoice total",
+                        value = formatCurrency(preview.invoiceTotal, currency),
+                        supporting = "Labor, materials, callout, and extras",
+                    )
+                    LedgerMetricTile(
+                        label = "Total costs",
+                        value = formatCurrency(preview.totalCosts, currency),
+                        supporting = "Materials cost plus travel",
+                    )
+                }
+                if (!billing.isPro) {
+                    Text(
+                        text = "$jobCount of 15 starter jobs used.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        item {
+            FormSection(
                 title = "1. Work details",
-                subtitle = "The customer, the job, and the notes you will care about later.",
+                subtitle = "The customer, the job, and the notes you will care about when the invoice is due.",
             ) {
-                Field(
+                FormField(
                     label = "Customer",
                     value = draft.clientName,
                     onValueChange = { value -> onDraftChange { it.copy(clientName = value) } },
                 )
-                Field(
+                FormField(
                     label = "Job or service",
                     value = draft.jobName,
                     onValueChange = { value -> onDraftChange { it.copy(jobName = value) } },
                 )
-                Field(
+                FormField(
                     label = "Site address",
                     value = draft.siteAddress,
                     onValueChange = { value -> onDraftChange { it.copy(siteAddress = value) } },
                 )
-                Field(
+                FormField(
                     label = "Work summary",
                     value = draft.workSummary,
                     onValueChange = { value -> onDraftChange { it.copy(workSummary = value) } },
-                    minLines = 3,
+                    minLines = 4,
                 )
             }
         }
 
         item {
-            SectionCard(
-                title = "2. Time and rate",
-                subtitle = "Set the service window and the labor rate that drives the draft total.",
+            FormSection(
+                title = "2. Time and labor",
+                subtitle = "Set the work window and the labor rate that drives the draft total.",
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Date",
                         value = draft.dateText,
                         onValueChange = { value -> onDraftChange { it.copy(dateText = value) } },
                     )
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Labor rate",
                         value = draft.laborRateText,
@@ -153,13 +165,13 @@ fun JobFormScreen(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Start time",
                         value = draft.startTimeText,
                         onValueChange = { value -> onDraftChange { it.copy(startTimeText = value) } },
                     )
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "End time",
                         value = draft.endTimeText,
@@ -170,19 +182,19 @@ fun JobFormScreen(
         }
 
         item {
-            SectionCard(
+            FormSection(
                 title = "3. Billable items",
-                subtitle = "Separate what the customer sees from what the job actually costs you.",
+                subtitle = "Separate what you charge from what the job actually costs you.",
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Materials billed",
                         value = draft.materialsBilledText,
                         onValueChange = { value -> onDraftChange { it.copy(materialsBilledText = value) } },
                         keyboardType = KeyboardType.Decimal,
                     )
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Callout fee",
                         value = draft.calloutFeeText,
@@ -191,14 +203,14 @@ fun JobFormScreen(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Extra charge",
                         value = draft.extraChargeText,
                         onValueChange = { value -> onDraftChange { it.copy(extraChargeText = value) } },
                         keyboardType = KeyboardType.Decimal,
                     )
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Materials cost",
                         value = draft.materialsCostText,
@@ -206,7 +218,7 @@ fun JobFormScreen(
                         keyboardType = KeyboardType.Decimal,
                     )
                 }
-                Field(
+                FormField(
                     label = "Travel cost",
                     value = draft.travelCostText,
                     onValueChange = { value -> onDraftChange { it.copy(travelCostText = value) } },
@@ -216,9 +228,9 @@ fun JobFormScreen(
         }
 
         item {
-            SectionCard(
-                title = "4. Follow-up",
-                subtitle = "Keep the invoice moving with a due date, reminder date, and pipeline status.",
+            FormSection(
+                title = "4. Follow-up and status",
+                subtitle = "Choose the invoice stage and set due or reminder dates before the job goes cold.",
             ) {
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -229,63 +241,66 @@ fun JobFormScreen(
                             selected = draft.status == status,
                             onClick = { onDraftChange { it.copy(status = status) } },
                             label = { Text(status.label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                            shape = RoundedCornerShape(18.dp),
                         )
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Due date",
                         value = draft.dueDateText,
                         onValueChange = { value -> onDraftChange { it.copy(dueDateText = value) } },
                     )
-                    Field(
+                    FormField(
                         modifier = Modifier.weight(1f),
                         label = "Reminder date",
                         value = draft.reminderDateText,
                         onValueChange = { value -> onDraftChange { it.copy(reminderDateText = value) } },
                     )
                 }
-                Field(
+                FormField(
                     label = "Reminder note",
                     value = draft.reminderNote,
                     onValueChange = { value -> onDraftChange { it.copy(reminderNote = value) } },
-                    minLines = 2,
+                    minLines = 3,
                 )
             }
         }
 
         item {
-            Card(
-                shape = RoundedCornerShape(30.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            LedgerPanel(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(text = "Ready to save", style = MaterialTheme.typography.titleMedium)
+                LedgerSectionHeader(
+                    title = "Ready to save",
+                    body = "Review the money side one last time before this job becomes part of the ledger.",
+                )
+                Text(
+                    text = "Invoice ${formatCurrency(preview.invoiceTotal, currency)}  •  Costs ${formatCurrency(preview.totalCosts, currency)}  •  Profit ${formatCurrency(preview.estimatedProfit, currency)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = "Due ${preview.dueDateText.ifBlank { "not set" }}  •  Reminder ${preview.reminderDateText.ifBlank { "not set" }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (limitReached) {
                     Text(
-                        text = "Invoice ${formatCurrency(preview.invoiceTotal, currency)}  •  Costs ${formatCurrency(preview.totalCosts, currency)}  •  Profit ${formatCurrency(preview.estimatedProfit, currency)}",
+                        text = "The starter plan limit is reached. Move to Pro to keep logging jobs.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    Text(
-                        text = "Due ${preview.dueDateText.ifBlank { "not set" }}  •  Reminder ${preview.reminderDateText.ifBlank { "not set" }}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (limitReached) {
-                        Text(
-                            text = "The starter plan limit is reached. Move to Pro to keep logging jobs.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
-                            Text("Unlock Pro")
-                        }
-                    } else {
-                        Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
-                            Text("Save job")
-                        }
+                    Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
+                        Text("Unlock Pro")
+                    }
+                } else {
+                    Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
+                        Text("Save job")
                     }
                 }
             }
@@ -294,74 +309,64 @@ fun JobFormScreen(
 }
 
 @Composable
-private fun SummaryPill(
+private fun HeroDraftPill(
     label: String,
 ) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
+    LedgerPill(
+        label = label,
+        containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.16f),
+        contentColor = androidx.compose.ui.graphics.Color.White,
+    )
+}
+
+@Composable
+private fun RowScope.DraftHeroMetric(
+    label: String,
+    value: String,
+) {
+    androidx.compose.material3.Surface(
+        modifier = Modifier.weight(1f),
+        shape = RoundedCornerShape(24.dp),
+        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f),
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.75f),
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                color = androidx.compose.ui.graphics.Color.White,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FormSection(
+    title: String,
+    subtitle: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    LedgerPanel {
+        LedgerSectionHeader(
+            title = title,
+            body = subtitle,
+        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content,
         )
     }
 }
 
 @Composable
-private fun RowScope.DraftMetric(
-    label: String,
-    value: String,
-) {
-    Surface(
-        modifier = Modifier.weight(1f),
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(text = value, style = MaterialTheme.typography.titleSmall)
-        }
-    }
-}
-
-@Composable
-private fun SectionCard(
-    title: String,
-    subtitle: String,
-    content: @Composable () -> Unit,
-) {
-    Card(
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            content()
-        }
-    }
-}
-
-@Composable
-private fun Field(
+private fun FormField(
     modifier: Modifier = Modifier,
     label: String,
     value: String,
@@ -377,6 +382,7 @@ private fun Field(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         minLines = minLines,
         singleLine = minLines == 1,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = ledgerTextFieldColors(),
     )
 }

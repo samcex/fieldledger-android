@@ -1,7 +1,7 @@
 package com.indie.shiftledger.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,11 +30,12 @@ fun InvoiceStatusBadge(
         modifier = modifier,
         color = containerColor,
         contentColor = contentColor,
-        shape = RoundedCornerShape(999.dp),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
     ) {
         Text(
-            text = status.label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            text = status.label.uppercase(),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
             style = MaterialTheme.typography.labelMedium,
         )
     }

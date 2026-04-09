@@ -3,16 +3,21 @@ package com.indie.shiftledger
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
@@ -24,9 +29,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -55,6 +57,7 @@ import com.indie.shiftledger.ui.screens.OnboardingScreen
 import com.indie.shiftledger.ui.screens.PaywallScreen
 import com.indie.shiftledger.ui.screens.SettingsScreen
 import com.indie.shiftledger.ui.theme.FieldLedgerTheme
+import com.indie.shiftledger.ui.theme.LedgerPill
 
 @Composable
 fun FieldLedgerApp(
@@ -77,15 +80,16 @@ fun FieldLedgerApp(
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = Color.Transparent,
+                    contentWindowInsets = WindowInsets(0),
                     snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 ) { innerPadding ->
                     OnboardingScreen(
                         modifier = Modifier.padding(bottom = 8.dp),
                         contentPadding = PaddingValues(
                             start = 20.dp,
-                            top = innerPadding.calculateTopPadding() + 20.dp,
+                            top = innerPadding.calculateTopPadding() + 26.dp,
                             end = 20.dp,
-                            bottom = innerPadding.calculateBottomPadding() + 20.dp,
+                            bottom = innerPadding.calculateBottomPadding() + 28.dp,
                         ),
                         currency = uiState.currency,
                         onCurrencySelected = viewModel::updateCurrency,
@@ -96,6 +100,7 @@ fun FieldLedgerApp(
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = Color.Transparent,
+                    contentWindowInsets = WindowInsets(0),
                     topBar = {
                         AppChrome(
                             selectedTab = uiState.selectedTab,
@@ -114,9 +119,9 @@ fun FieldLedgerApp(
                 ) { innerPadding ->
                     val contentPadding = PaddingValues(
                         start = 20.dp,
-                        top = innerPadding.calculateTopPadding(),
+                        top = innerPadding.calculateTopPadding() + 10.dp,
                         end = 20.dp,
-                        bottom = innerPadding.calculateBottomPadding() + 8.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 12.dp,
                     )
 
                     when (uiState.selectedTab) {
@@ -202,7 +207,7 @@ private fun AppBackdrop(
                 brush = Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                         MaterialTheme.colorScheme.background,
                     ),
                 ),
@@ -214,11 +219,11 @@ private fun AppBackdrop(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
                             Color.Transparent,
                         ),
-                        center = Offset(120f, 120f),
-                        radius = 680f,
+                        center = Offset(180f, 80f),
+                        radius = 760f,
                     ),
                 ),
         )
@@ -228,11 +233,11 @@ private fun AppBackdrop(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f),
                             Color.Transparent,
                         ),
-                        center = Offset(900f, 0f),
-                        radius = 920f,
+                        center = Offset(960f, 260f),
+                        radius = 960f,
                     ),
                 ),
         )
@@ -252,15 +257,16 @@ private fun AppChrome(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.98f),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        shape = RoundedCornerShape(30.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)),
+        shadowElevation = 10.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 10.dp),
+                .padding(horizontal = 18.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -269,25 +275,45 @@ private fun AppChrome(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    text = meta.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "SHIFTLEDGER",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "FieldLedger",
+                    text = meta.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = meta.subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                text = buildString {
-                    append(currency.code)
-                    if (isPro) {
-                        append(" • Pro")
-                    }
-                },
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                LedgerPill(
+                    label = currency.code,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                LedgerPill(
+                    label = if (isPro) "Pro active" else "Starter",
+                    containerColor = if (isPro) {
+                        MaterialTheme.colorScheme.tertiaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    },
+                    contentColor = if (isPro) {
+                        MaterialTheme.colorScheme.onTertiaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    },
+                )
+            }
         }
     }
 }
@@ -300,9 +326,9 @@ private fun FieldLedgerBottomBar(
 ) {
     val items = remember {
         listOf(
-            BottomBarItem(FieldLedgerTab.Dashboard, "Overview", Icons.Rounded.Dashboard),
+            BottomBarItem(FieldLedgerTab.Dashboard, "Home", Icons.Rounded.Dashboard),
             BottomBarItem(FieldLedgerTab.AddJob, "Capture", Icons.Rounded.PostAdd),
-            BottomBarItem(FieldLedgerTab.History, "Jobs", Icons.Rounded.History),
+            BottomBarItem(FieldLedgerTab.History, "Ledger", Icons.Rounded.History),
             BottomBarItem(FieldLedgerTab.Settings, "Settings", Icons.Rounded.Settings),
             BottomBarItem(FieldLedgerTab.Pro, "Pro", Icons.Rounded.Lock),
         )
@@ -311,42 +337,75 @@ private fun FieldLedgerBottomBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            shape = RoundedCornerShape(30.dp),
+            modifier = Modifier.widthIn(max = 640.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
-            tonalElevation = 10.dp,
+            shape = RoundedCornerShape(34.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)),
             shadowElevation = 14.dp,
         ) {
-            NavigationBar(
-                containerColor = Color.Transparent,
-                tonalElevation = 0.dp,
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items.forEach { item ->
-                    NavigationBarItem(
-                        selected = item.tab == selectedTab,
-                        onClick = { onSelect(item.tab) },
-                        alwaysShowLabel = false,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                        ),
-                        icon = {
+                    val selected = item.tab == selectedTab
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSelect(item.tab) },
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            Color.Transparent
+                        },
+                        shape = RoundedCornerShape(24.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             if (item.tab == FieldLedgerTab.Pro && !isPro) {
                                 BadgedBox(badge = { Badge() }) {
-                                    Icon(item.icon, contentDescription = item.label)
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = item.label,
+                                        tint = if (selected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
                                 }
                             } else {
-                                Icon(item.icon, contentDescription = item.label)
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = item.label,
+                                    tint = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
                             }
-                        },
-                        label = { Text(item.label) },
-                    )
+                            Text(
+                                text = item.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -361,27 +420,33 @@ private data class BottomBarItem(
 
 private data class TabMeta(
     val title: String,
+    val subtitle: String,
 )
 
 private fun tabMeta(selectedTab: FieldLedgerTab): TabMeta = when (selectedTab) {
     FieldLedgerTab.Dashboard -> TabMeta(
-        title = "Overview",
+        title = "Command overview",
+        subtitle = "Weekly totals, outstanding value, and your latest work.",
     )
 
     FieldLedgerTab.AddJob -> TabMeta(
-        title = "Capture Job",
+        title = "Capture a job",
+        subtitle = "Log the work while the details are still fresh.",
     )
 
     FieldLedgerTab.History -> TabMeta(
-        title = "Jobs",
+        title = "Ledger and pipeline",
+        subtitle = "Invoices, reminders, export, and payment status.",
     )
 
     FieldLedgerTab.Pro -> TabMeta(
-        title = "FieldLedger Pro",
+        title = "ShiftLedger Pro",
+        subtitle = "Plans, purchase state, and launch readiness.",
     )
 
     FieldLedgerTab.Settings -> TabMeta(
-        title = "Settings",
+        title = "Preferences",
+        subtitle = "Currency and display mode for this device.",
     )
 }
 
