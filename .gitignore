@@ -14,5 +14,3 @@ backend/.env
 *.jks
 *.keystore
 keystore.properties
-.aidesigner/*
-!.aidesigner/.gitkeep
