@@ -1,9 +1,6 @@
 import {
   APP_NAME,
   CURRENCY_OPTIONS,
-  FALLBACK_OFFERS,
-  FEATURE_BULLETS,
-  FREE_JOB_LIMIT,
   INVOICE_STATUSES,
   PRICING_MODES,
   TABS,
@@ -18,7 +15,6 @@ import {
   formatCurrency,
   formatHours,
   formatShortDate,
-  getRemainingFreeEntries,
   hasMoneyValue,
   isEditingDraft,
   jobToDraft,
@@ -57,7 +53,6 @@ const state = {
   selectedTab: TABS.DASHBOARD,
   draft: createDefaultDraft(),
   formUi: deriveFormUi(createDefaultDraft()),
-  serverConfig: {},
   toastMessage: "",
   installPromptEvent: null,
   installPromptDismissed: loadInstallPromptDismissed(),
@@ -102,48 +97,9 @@ function persistSettings() {
   saveSettings(state.settings);
 }
 
-function setBillingCustomerId(customerId) {
-  state.settings = {
-    ...state.settings,
-    billingCustomerId: customerId || null,
-  };
-  persistSettings();
-}
-
 function persistJobs() {
   saveJobs(state.jobs);
   reminderEngine.sync(state.jobs);
-}
-
-async function postJson(url, payload) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || data.message || "Request failed.");
-  }
-  return data;
-}
-
-function billingStateFromSnapshot(snapshot = {}, fallbackMessage = null) {
-  const baseState = createBillingState(state.serverConfig);
-  return {
-    ...baseState,
-    isLoading: false,
-    isConnected: baseState.checkoutEnabled || baseState.isConnected,
-    isPro: Boolean(snapshot.active ?? baseState.isPro),
-    verificationSource: snapshot.source || baseState.verificationSource,
-    verifiedExpiryTime: snapshot.currentPeriodEnd || null,
-    statusMessage:
-      snapshot.message ||
-      fallbackMessage ||
-      (Boolean(snapshot.active) ? "Pro verified by Stripe." : baseState.statusMessage),
-  };
 }
 
 function normalizeUrlState() {
@@ -153,12 +109,6 @@ function normalizeUrlState() {
     state.selectedTab = requestedTab;
   }
   return url;
-}
-
-function clearCheckoutQueryState(url) {
-  url.searchParams.delete("checkout");
-  url.searchParams.delete("session_id");
-  window.history.replaceState({}, "", url.toString());
 }
 
 function queueRender() {
@@ -213,12 +163,8 @@ function dashboardSnapshot() {
   return createDashboardSnapshot(state.jobs);
 }
 
-function remainingFreeEntries() {
-  return getRemainingFreeEntries(state.jobs.length);
-}
-
 function canSaveNewJob() {
-  return state.billing.isPro || isEditingDraft(state.draft) || state.jobs.length < FREE_JOB_LIMIT;
+  return true;
 }
 
 function syncFormUiFromDraft() {
@@ -287,12 +233,6 @@ function removeJob(jobId) {
 }
 
 function handleSaveDraft() {
-  if (!canSaveNewJob()) {
-    state.selectedTab = TABS.PRO;
-    showToast("Free plan limit reached. Upgrade to keep adding jobs.");
-    return;
-  }
-
   const validation = validateDraft(state.draft);
   if (!validation.job) {
     showToast(validation.errorMessage || "Could not save the job.");
@@ -407,7 +347,6 @@ async function handleExport(jobId) {
       currencyCode: state.settings.currencyCode,
       companyName: state.settings.companyName,
       logoDataUrl: state.settings.logoDataUrl,
-      isPro: state.billing.isPro,
     });
     markInvoiceSent(jobId, false);
     showToast("Invoice PDF ready to send.");
@@ -424,170 +363,8 @@ function handleContinueOnboarding() {
 }
 
 async function loadServerConfig() {
-  const fallbackConfig = {
-    forcePro: false,
-    checkoutEnabled: false,
-    offers: FALLBACK_OFFERS,
-    portalEnabled: false,
-  };
-
-  try {
-    const response = await fetch("/api/web-config");
-    if (!response.ok) {
-      throw new Error("Config request failed.");
-    }
-    state.serverConfig = await response.json();
-  } catch (_error) {
-    state.serverConfig = fallbackConfig;
-  }
-  state.billing = createBillingState(state.serverConfig);
+  state.billing = createBillingState();
   queueRender();
-}
-
-async function refreshBillingStatus(options = {}) {
-  const { silent = false } = options;
-
-  if (state.serverConfig.forcePro) {
-    state.billing = createBillingState(state.serverConfig);
-    queueRender();
-    return true;
-  }
-
-  if (!state.settings.billingCustomerId) {
-    state.billing = createBillingState(state.serverConfig);
-    queueRender();
-    if (!silent && state.billing.checkoutEnabled) {
-      showToast("No Stripe subscription is linked to this device yet.");
-    }
-    return false;
-  }
-
-  state.billing = {
-    ...state.billing,
-    isLoading: true,
-    statusMessage: "Checking Stripe subscription status...",
-  };
-  queueRender();
-
-  try {
-    const snapshot = await postJson("/api/stripe/billing-status", {
-      customerId: state.settings.billingCustomerId,
-      installationId: state.settings.installationId,
-    });
-    state.billing = billingStateFromSnapshot(snapshot);
-    queueRender();
-    if (!silent) {
-      showToast(snapshot.active ? "Stripe subscription confirmed." : snapshot.message || "No active Stripe subscription found.");
-    }
-    return Boolean(snapshot.active);
-  } catch (caught) {
-    state.billing = billingStateFromSnapshot({}, caught instanceof Error ? caught.message : "Could not load Stripe billing status.");
-    queueRender();
-    if (!silent) {
-      showToast(state.billing.statusMessage);
-    }
-    return false;
-  }
-}
-
-async function verifyCheckoutSession(sessionId) {
-  state.billing = {
-    ...state.billing,
-    isLoading: true,
-    statusMessage: "Verifying Stripe checkout...",
-  };
-  queueRender();
-
-  try {
-    const snapshot = await postJson("/api/stripe/checkout-status", {
-      installationId: state.settings.installationId,
-      sessionId,
-    });
-    if (snapshot.customerId) {
-      setBillingCustomerId(snapshot.customerId);
-    }
-    state.billing = billingStateFromSnapshot(snapshot);
-    queueRender();
-    showToast(snapshot.active ? "Payment confirmed. Pro is active." : snapshot.message || "Stripe checkout finished, but Pro is not active yet.");
-    return Boolean(snapshot.active);
-  } catch (caught) {
-    state.billing = billingStateFromSnapshot({}, caught instanceof Error ? caught.message : "Could not verify the Stripe checkout.");
-    queueRender();
-    showToast(state.billing.statusMessage);
-    return false;
-  }
-}
-
-async function startCheckout(productId) {
-  if (!state.billing.checkoutEnabled) {
-    showToast("Stripe checkout is not configured on this deploy yet.");
-    return;
-  }
-
-  state.billing = {
-    ...state.billing,
-    isLoading: true,
-    statusMessage: "Opening Stripe Checkout...",
-  };
-  queueRender();
-
-  try {
-    const payload = await postJson("/api/stripe/create-checkout-session", {
-      installationId: state.settings.installationId,
-      productId,
-    });
-    if (!payload.url) {
-      throw new Error("Stripe did not return a checkout URL.");
-    }
-    window.location.assign(payload.url);
-  } catch (caught) {
-    state.billing = billingStateFromSnapshot({}, caught instanceof Error ? caught.message : "Could not start Stripe Checkout.");
-    queueRender();
-    showToast(state.billing.statusMessage);
-  }
-}
-
-async function openBillingPortal() {
-  if (!state.settings.billingCustomerId) {
-    showToast("No Stripe billing customer is linked to this device.");
-    return;
-  }
-
-  try {
-    const payload = await postJson("/api/stripe/create-portal-session", {
-      customerId: state.settings.billingCustomerId,
-      returnUrl: `${window.location.origin}/?tab=Pro`,
-    });
-    if (!payload.url) {
-      throw new Error("Stripe did not return a billing portal URL.");
-    }
-    window.location.assign(payload.url);
-  } catch (caught) {
-    showToast(caught instanceof Error ? caught.message : "Could not open the Stripe billing portal.");
-  }
-}
-
-async function restoreBillingFromUrl() {
-  const url = normalizeUrlState();
-  const checkoutState = url.searchParams.get("checkout");
-  const sessionId = url.searchParams.get("session_id");
-
-  if (checkoutState === "cancel") {
-    state.selectedTab = TABS.PRO;
-    clearCheckoutQueryState(url);
-    showToast("Checkout canceled.");
-    await refreshBillingStatus({ silent: true });
-    return;
-  }
-
-  if (checkoutState === "success" && sessionId) {
-    state.selectedTab = TABS.PRO;
-    await verifyCheckoutSession(sessionId);
-    clearCheckoutQueryState(url);
-    return;
-  }
-
-  await refreshBillingStatus({ silent: true });
 }
 
 function applyTheme() {
@@ -678,7 +455,7 @@ function renderTopBar() {
       </div>
       <div class="topbar-pills">
         ${renderPill(state.settings.currencyCode, "primary")}
-        ${renderPill(state.billing.isPro ? "Pro active" : "Starter", state.billing.isPro ? "success" : "accent")}
+        ${renderPill("All features free", "success")}
         ${
           state.installPromptEvent && !state.installPromptDismissed
             ? `<button type="button" class="install-link" data-action="install-app">Install app</button>`
@@ -695,7 +472,6 @@ function navItems() {
     { tab: TABS.ADD_JOB, label: "New" },
     { tab: TABS.HISTORY, label: "Jobs" },
     { tab: TABS.SETTINGS, label: "Settings" },
-    { tab: TABS.PRO, label: "Pro" },
   ];
 }
 
@@ -712,11 +488,6 @@ function renderNav(className) {
               data-tab="${item.tab}"
             >
               <span>${escapeHtml(item.label)}</span>
-              ${
-                item.tab === TABS.PRO && !state.billing.isPro
-                  ? '<span class="nav-dot" aria-hidden="true"></span>'
-                  : ""
-              }
             </button>
           `,
         )
@@ -727,7 +498,6 @@ function renderNav(className) {
 
 function renderDashboardScreen() {
   const snapshot = dashboardSnapshot();
-  const remaining = remainingFreeEntries();
   const jobs = recentJobs();
   const maxTrendValue = Math.max(...snapshot.trend.map((item) => item.value), 1);
 
@@ -763,53 +533,29 @@ function renderDashboardScreen() {
         </div>
       </article>
 
-      ${
-        !state.billing.isPro
-          ? `
-            <article class="panel panel-accent">
-              <div class="section-header">
-                <div>
-                  <h3>Free plan</h3>
-                  <p>You can save up to 15 jobs on the free plan.</p>
-                </div>
-                ${renderPill(`${remaining} left`, "soft")}
-              </div>
-              <p>${state.jobs.length} jobs saved so far.</p>
-              ${renderButton("See Pro plans", 'class="button button-primary" data-action="open-pro"')}
-            </article>
-          `
-          : ""
-      }
-
       <article class="panel">
         <div class="section-header">
           <div>
             <h3>Last 4 weeks</h3>
-            <p>${state.billing.isPro ? "A simple view of how your weekly totals are moving." : "The free plan shows a preview. Pro unlocks the full chart."}</p>
+            <p>A simple view of how your weekly totals are moving.</p>
           </div>
         </div>
-        ${
-          state.billing.isPro
-            ? `
-              <div class="trend-board">
-                ${snapshot.trend
-                  .map((item) => {
-                    const height = Math.max(18, Math.round((item.value / maxTrendValue) * 128));
-                    return `
-                      <div class="trend-column">
-                        <div class="trend-bar-wrap">
-                          <div class="trend-bar" style="height:${height}px"></div>
-                        </div>
-                        <strong>${escapeHtml(item.label)}</strong>
-                        <span>${escapeHtml(formatCurrency(item.value, state.settings.currencyCode))}</span>
-                      </div>
-                    `;
-                  })
-                  .join("")}
-              </div>
-            `
-            : renderEmptyCard("4-week chart locked", "Upgrade to Pro to see the full weekly trend.")
-        }
+        <div class="trend-board">
+          ${snapshot.trend
+            .map((item) => {
+              const height = Math.max(18, Math.round((item.value / maxTrendValue) * 128));
+              return `
+                <div class="trend-column">
+                  <div class="trend-bar-wrap">
+                    <div class="trend-bar" style="height:${height}px"></div>
+                  </div>
+                  <strong>${escapeHtml(item.label)}</strong>
+                  <span>${escapeHtml(formatCurrency(item.value, state.settings.currencyCode))}</span>
+                </div>
+              `;
+            })
+            .join("")}
+        </div>
       </article>
 
       <div class="section-header">
@@ -900,8 +646,6 @@ function renderChipSelector({ items, selectedValue, action, valueKey = "value", 
 
 function renderJobFormScreen() {
   const preview = previewDraft(state.draft);
-  const remaining = remainingFreeEntries();
-  const limitReached = !state.billing.isPro && !isEditingDraft(state.draft) && remaining === 0;
 
   return `
     <section class="screen">
@@ -920,7 +664,7 @@ function renderJobFormScreen() {
         }
         <div class="pill-row">
           ${renderPill(`Currency ${state.settings.currencyCode}`, "inverse")}
-          ${renderPill(state.billing.isPro ? "Pro active" : `${remaining} free left`, "inverse")}
+          ${renderPill("Ready to save", "inverse")}
         </div>
         <div class="hero-metrics">
           ${renderHeroMetric("Profit", formatCurrency(preview.estimatedProfit, state.settings.currencyCode))}
@@ -944,11 +688,6 @@ function renderJobFormScreen() {
           ${renderMetricTile("Invoice total", formatCurrency(preview.invoiceTotal, state.settings.currencyCode), state.draft.pricingMode === "fixed" ? "Job price, materials, callout, and extras" : "Labor, materials, callout, and extras")}
           ${renderMetricTile("Total costs", formatCurrency(preview.totalCosts, state.settings.currencyCode), "Materials cost plus travel")}
         </div>
-        ${
-          !state.billing.isPro
-            ? `<p class="subtle-copy">${state.jobs.length} of 15 starter jobs used.</p>`
-            : ""
-        }
       </article>
 
       <article class="panel">
@@ -1092,20 +831,11 @@ function renderJobFormScreen() {
         </div>
         <p>Total ${escapeHtml(formatCurrency(preview.invoiceTotal, state.settings.currencyCode))} • Costs ${escapeHtml(formatCurrency(preview.totalCosts, state.settings.currencyCode))} • Profit ${escapeHtml(formatCurrency(preview.estimatedProfit, state.settings.currencyCode))}</p>
         <p class="subtle-copy">Due ${escapeHtml(preview.dueDateText || "not set")} • Reminder ${escapeHtml(preview.reminderDateText || "not set")}</p>
+        ${renderButton(isEditingDraft(state.draft) ? "Update job" : "Save job", 'class="button button-primary" data-action="save-job"')}
         ${
-          limitReached
-            ? `
-              <p>The free plan limit is reached. Move to Pro to keep saving jobs.</p>
-              ${renderButton("Unlock Pro", 'class="button button-primary" data-action="open-pro"')}
-            `
-            : `
-              ${renderButton(isEditingDraft(state.draft) ? "Update job" : "Save job", 'class="button button-primary" data-action="save-job"')}
-              ${
-                isEditingDraft(state.draft)
-                  ? renderButton("Cancel edit", 'class="button button-secondary" data-action="cancel-edit"')
-                  : ""
-              }
-            `
+          isEditingDraft(state.draft)
+            ? renderButton("Cancel edit", 'class="button button-secondary" data-action="cancel-edit"')
+            : ""
         }
       </article>
     </section>
@@ -1206,103 +936,6 @@ function renderHistoryJobCard(job) {
   `;
 }
 
-function renderOfferCard(offer) {
-  const purchaseEnabled = Boolean(offer.checkoutEnabled ?? state.billing.checkoutEnabled) && !state.billing.isPro;
-  const highlighted = offer.productId === "field_ledger_pro_yearly";
-  return `
-    <article class="panel offer-card ${highlighted ? "offer-card-highlighted" : ""}">
-      <div class="section-header">
-        <div>
-          ${
-            highlighted
-              ? renderPill("Best value", "primary")
-              : ""
-          }
-          <h3>${escapeHtml(offer.title)}</h3>
-          <strong class="offer-price">${escapeHtml(offer.price)}</strong>
-          <p>${escapeHtml(
-            offer.productId === "field_ledger_pro_yearly"
-              ? "Best for operators who invoice every week and want the habit to stick."
-              : offer.productId === "field_ledger_pro_monthly"
-                ? "Lower commitment while you prove the workflow saves enough time to justify itself."
-                : offer.description,
-          )}</p>
-        </div>
-      </div>
-      ${renderButton(
-        state.billing.isPro
-          ? "Pro already active"
-          : purchaseEnabled
-            ? "Open Stripe Checkout"
-            : "Waiting for Stripe setup",
-        `class="button button-primary" data-action="purchase-offer" data-product-id="${offer.productId}" ${purchaseEnabled ? "" : "disabled"}`,
-      )}
-    </article>
-  `;
-}
-
-function renderPaywallScreen() {
-  const offers = state.billing.offers?.length ? state.billing.offers : FALLBACK_OFFERS;
-
-  return `
-    <section class="screen">
-      <article class="hero-card">
-        ${renderPill(state.billing.isPro ? "Pro active" : "Subscription", "inverse")}
-        <h2>${escapeHtml(state.billing.isPro ? "The paid workflow is unlocked in the web preview." : "Upgrade when the workflow saves enough admin time to earn its keep.")}</h2>
-        <p>${escapeHtml(state.billing.isPro ? "Unlimited capture, cleaner follow-up, and a tool that can stay open all week." : "Unlimited jobs, recurring follow-up tools, and a fuller revenue view are what this upgrade is for.")}</p>
-        ${state.billing.statusMessage ? `<p class="hero-note">${escapeHtml(state.billing.statusMessage)}</p>` : ""}
-      </article>
-
-      <article class="panel">
-        <div class="section-header">
-          <div>
-            <h3>What Pro adds</h3>
-            <p>Three reasons the subscription exists in the product at all.</p>
-          </div>
-        </div>
-        <div class="feature-list">
-          ${FEATURE_BULLETS.map((feature) => `<div class="feature-item">${escapeHtml(feature)}</div>`).join("")}
-        </div>
-      </article>
-
-      ${offers.map((offer) => renderOfferCard(offer)).join("")}
-
-      <article class="panel">
-        <div class="section-header">
-          <div>
-            <h3>Launch checklist</h3>
-            <p>${escapeHtml(
-              state.serverConfig.forcePro
-                ? "Preview mode is forcing Pro open for testing."
-                : state.billing.checkoutEnabled
-                  ? "Stripe checkout is configured. Complete a checkout on this device, then use Refresh billing status if needed."
-                  : "Set STRIPE_SECRET_KEY, STRIPE_MONTHLY_PRICE_ID, and STRIPE_YEARLY_PRICE_ID in Netlify to enable payment.",
-            )}</p>
-          </div>
-        </div>
-        ${
-          state.billing.verificationSource
-            ? `<p class="subtle-copy">Verification source: ${escapeHtml(state.billing.verificationSource)}</p>`
-            : ""
-        }
-        ${
-          state.billing.verifiedExpiryTime
-            ? `<p class="subtle-copy">Current period ends ${escapeHtml(new Date(state.billing.verifiedExpiryTime).toLocaleDateString())}</p>`
-            : ""
-        }
-        <div class="action-row">
-          ${renderButton("Refresh billing status", 'class="button button-secondary" data-action="refresh-billing"')}
-          ${
-            state.billing.isPro && state.billing.portalEnabled && state.settings.billingCustomerId
-              ? renderButton("Manage billing", 'class="button button-primary" data-action="open-customer-portal"')
-              : ""
-          }
-        </div>
-      </article>
-    </section>
-  `;
-}
-
 function renderSettingsScreen() {
   const logoState = state.settings.logoDataUrl
     ? `<img class="logo-preview-image" src="${escapeHtml(state.settings.logoDataUrl)}" alt="Invoice logo preview" />`
@@ -1317,14 +950,7 @@ function renderSettingsScreen() {
         <div class="pill-row">
           ${renderPill(displayCurrencyLabel(state.settings.currencyCode), "inverse")}
           ${renderPill(THEME_MODES.find((mode) => mode.storageValue === state.settings.themeMode)?.label || "Light", "inverse")}
-          ${renderPill(
-            state.billing.isPro
-              ? state.settings.logoDataUrl
-                ? "Logo ready"
-                : "Name only"
-              : "Logo in Pro",
-            "inverse",
-          )}
+          ${renderPill(state.settings.logoDataUrl ? "Logo ready" : "Name only", "inverse")}
         </div>
       </article>
 
@@ -1332,7 +958,7 @@ function renderSettingsScreen() {
         <div class="section-header">
           <div>
             <h3>Invoice branding</h3>
-            <p>Company name is free. Custom logo and full white-label PDF export are Pro.</p>
+            <p>Company name and custom logo both appear on exported invoices.</p>
           </div>
         </div>
         <div class="field-grid">
@@ -1343,22 +969,16 @@ function renderSettingsScreen() {
           <div>
             <h4>${escapeHtml(state.settings.companyName || "ShiftLedger")}</h4>
             <p>${escapeHtml(
-              state.billing.isPro
-                ? state.settings.logoDataUrl
-                  ? "Your exported PDF will use the selected logo."
-                  : "Your exported PDF will use the company name only."
-                : "Free invoices use your company name plus a small ShiftLedger credit.",
+              state.settings.logoDataUrl
+                ? "Your exported PDF will use the selected logo."
+                : "Your exported PDF will use the company name only.",
             )}</p>
           </div>
         </div>
         <div class="action-row">
           ${renderButton(
-            state.billing.isPro
-              ? state.settings.logoDataUrl
-                ? "Replace logo"
-                : "Choose logo"
-              : "Unlock logo",
-            `class="button button-primary" data-action="${state.billing.isPro ? "choose-logo" : "open-pro"}"`,
+            state.settings.logoDataUrl ? "Replace logo" : "Choose logo",
+            'class="button button-primary" data-action="choose-logo"',
           )}
           ${
             state.settings.logoDataUrl
@@ -1367,11 +987,7 @@ function renderSettingsScreen() {
           }
         </div>
         <p class="subtle-copy">
-          ${
-            state.billing.isPro
-              ? "PNG, JPG, or WEBP work best. If you skip the logo, the PDF still uses your company name."
-              : "Free invoices can use your company name. Pro unlocks the logo and removes the ShiftLedger credit."
-          }
+          PNG, JPG, or WEBP work best. If you skip the logo, the PDF still uses your company name.
         </p>
       </article>
 
@@ -1448,12 +1064,8 @@ function renderSettingsScreen() {
         <p class="subtle-copy">
           ${
             state.settings.logoDataUrl
-              ? state.billing.isPro
-                ? "The invoice header will include the selected logo."
-                : "The saved logo is reserved for Pro invoices."
-              : state.billing.isPro
-                ? "The invoice header will use text only."
-                : "Free invoices use your company name plus a small ShiftLedger credit."
+              ? "The invoice header will include the selected logo."
+              : "The invoice header will use text only."
           }
         </p>
       </article>
@@ -1518,8 +1130,6 @@ function renderScreen() {
       return renderJobFormScreen();
     case TABS.HISTORY:
       return renderHistoryScreen();
-    case TABS.PRO:
-      return renderPaywallScreen();
     case TABS.SETTINGS:
       return renderSettingsScreen();
     default:
@@ -1573,9 +1183,6 @@ function handleActionClick(action, element) {
   switch (action) {
     case "select-tab":
       setSelectedTab(element.dataset.tab);
-      break;
-    case "open-pro":
-      setSelectedTab(TABS.PRO);
       break;
     case "continue-onboarding":
       handleContinueOnboarding();
@@ -1650,16 +1257,6 @@ function handleActionClick(action, element) {
     case "export-job":
       handleExport(jobId);
       break;
-    case "refresh-billing":
-      loadServerConfig().then(() => refreshBillingStatus());
-      break;
-    case "purchase-offer": {
-      startCheckout(element.dataset.productId);
-      break;
-    }
-    case "open-customer-portal":
-      openBillingPortal();
-      break;
     case "choose-logo":
       logoInput.click();
       break;
@@ -1733,7 +1330,7 @@ appElement.addEventListener("change", (event) => {
 
 logoInput.addEventListener("change", async () => {
   const [file] = logoInput.files ?? [];
-  if (!file || !state.billing.isPro) return;
+  if (!file) return;
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -1763,7 +1360,7 @@ window.addEventListener("focus", () => {
 async function start() {
   registerServiceWorker();
   await loadServerConfig();
-  await restoreBillingFromUrl();
+  normalizeUrlState();
   reminderEngine.sync(state.jobs);
   render();
 }

@@ -43,30 +43,8 @@ const TABS = {
   DASHBOARD: "Dashboard",
   ADD_JOB: "AddJob",
   HISTORY: "History",
-  PRO: "Pro",
   SETTINGS: "Settings",
 };
-
-const FEATURE_BULLETS = [
-  "Unlimited jobs, customers, and invoice stages",
-  "Four-week revenue trends and outstanding invoice totals",
-  "Invoice export, templates, and follow-up reminders",
-];
-
-const FALLBACK_OFFERS = [
-  {
-    productId: "field_ledger_pro_yearly",
-    title: "Pro Yearly",
-    description: "Best value for solo operators who invoice every week",
-    price: "$59.99 / year",
-  },
-  {
-    productId: "field_ledger_pro_monthly",
-    title: "Pro Monthly",
-    description: "Lower commitment while testing the workflow",
-    price: "$6.99 / month",
-  },
-];
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -560,24 +538,17 @@ function getRemainingFreeEntries(jobCount) {
 }
 
 function createBillingState(config = {}) {
-  const forcePro = Boolean(config.forcePro);
-  const checkoutEnabled = Boolean(config.checkoutEnabled);
-  const portalEnabled = Boolean(config.portalEnabled);
   return {
     isLoading: false,
-    isConnected: checkoutEnabled || forcePro,
-    isPro: forcePro,
-    offers: config.offers?.length ? config.offers : FALLBACK_OFFERS,
-    statusMessage: forcePro
-      ? "Web preview is running with Pro unlocked."
-      : checkoutEnabled
-        ? "Choose a plan to start Stripe Checkout."
-        : "Stripe checkout is not configured yet on this deploy.",
-    verificationSource: forcePro ? "web-preview-config" : null,
+    isConnected: false,
+    isPro: true,
+    offers: [],
+    statusMessage: "All features are currently free.",
+    verificationSource: null,
     verifiedExpiryTime: null,
-    isVerificationConfigured: checkoutEnabled || forcePro,
-    checkoutEnabled,
-    portalEnabled,
+    isVerificationConfigured: false,
+    checkoutEnabled: false,
+    portalEnabled: false,
   };
 }
 
@@ -600,11 +571,6 @@ function createTabMeta(selectedTab, isEditing) {
         title: "Jobs",
         subtitle: "Unpaid, paid, shared, and reminded jobs.",
       };
-    case TABS.PRO:
-      return {
-        title: "Pro",
-        subtitle: "Plans and billing status.",
-      };
     case TABS.SETTINGS:
       return {
         title: "Settings",
@@ -626,8 +592,6 @@ function nextJobId(jobs) {
 export {
   APP_NAME,
   CURRENCY_OPTIONS,
-  FALLBACK_OFFERS,
-  FEATURE_BULLETS,
   FREE_JOB_LIMIT,
   INVOICE_STATUSES,
   PRICING_MODES,

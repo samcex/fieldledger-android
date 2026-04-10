@@ -1,8 +1,4 @@
 package com.indie.shiftledger
-
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,11 +25,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PostAdd
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -61,7 +54,6 @@ import com.indie.shiftledger.ui.screens.DashboardScreen
 import com.indie.shiftledger.ui.screens.HistoryScreen
 import com.indie.shiftledger.ui.screens.JobFormScreen
 import com.indie.shiftledger.ui.screens.OnboardingScreen
-import com.indie.shiftledger.ui.screens.PaywallScreen
 import com.indie.shiftledger.ui.screens.SettingsScreen
 import com.indie.shiftledger.ui.theme.FieldLedgerTheme
 import com.indie.shiftledger.ui.theme.LedgerPill
@@ -77,14 +69,12 @@ fun FieldLedgerApp(
     val dashboardListState = rememberLazyListState()
     val formListState = rememberLazyListState()
     val historyListState = rememberLazyListState()
-    val proListState = rememberLazyListState()
     val settingsListState = rememberLazyListState()
     val activeListState = activeListState(
         selectedTab = uiState.selectedTab,
         dashboardListState = dashboardListState,
         formListState = formListState,
         historyListState = historyListState,
-        proListState = proListState,
         settingsListState = settingsListState,
     )
     val showAppChrome by remember(activeListState) {
@@ -133,7 +123,6 @@ fun FieldLedgerApp(
                             AppChrome(
                                 selectedTab = uiState.selectedTab,
                                 currency = uiState.currency,
-                                isPro = uiState.billing.isPro,
                                 isEditingDraft = uiState.isEditingDraft,
                             )
                         }
@@ -141,7 +130,6 @@ fun FieldLedgerApp(
                     bottomBar = {
                         FieldLedgerBottomBar(
                             selectedTab = uiState.selectedTab,
-                            isPro = uiState.billing.isPro,
                             onSelect = viewModel::selectTab,
                         )
                     },
@@ -161,11 +149,7 @@ fun FieldLedgerApp(
                             contentPadding = contentPadding,
                             snapshot = uiState.dashboard,
                             recentJobs = uiState.jobs.take(4),
-                            billing = uiState.billing,
                             currency = uiState.currency,
-                            jobCount = uiState.jobs.size,
-                            remainingFreeEntries = uiState.remainingFreeEntries,
-                            onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
                         )
 
                         FieldLedgerTab.AddJob -> JobFormScreen(
@@ -173,15 +157,11 @@ fun FieldLedgerApp(
                             listState = formListState,
                             contentPadding = contentPadding,
                             draft = uiState.draft,
-                            billing = uiState.billing,
                             currency = uiState.currency,
-                            jobCount = uiState.jobs.size,
-                            remainingFreeEntries = uiState.remainingFreeEntries,
                             isEditing = uiState.isEditingDraft,
                             onDraftChange = { updater -> viewModel.updateDraft(updater) },
                             onSave = viewModel::saveDraft,
                             onCancelEdit = viewModel::cancelDraftEdit,
-                            onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
                         )
 
                         FieldLedgerTab.History -> HistoryScreen(
@@ -197,7 +177,6 @@ fun FieldLedgerApp(
                                         currency = uiState.currency,
                                         companyName = uiState.companyName,
                                         logoUri = uiState.logoUri,
-                                        isPro = uiState.billing.isPro,
                                     )
                                     InvoiceShareLauncher.share(context, pdfFile)
                                     viewModel.markInvoiceSent(job.id, notify = false)
@@ -213,25 +192,10 @@ fun FieldLedgerApp(
                             onDelete = viewModel::deleteJob,
                         )
 
-                        FieldLedgerTab.Pro -> PaywallScreen(
-                            modifier = Modifier.padding(bottom = 8.dp),
-                            listState = proListState,
-                            contentPadding = contentPadding,
-                            billing = uiState.billing,
-                            resolveOffer = viewModel::proOfferByProductId,
-                            onRefresh = viewModel::refreshBilling,
-                            onPurchase = { offer ->
-                                context.findActivity()?.let { activity ->
-                                    viewModel.launchPurchase(activity, offer)
-                                }
-                            },
-                        )
-
                         FieldLedgerTab.Settings -> SettingsScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
                             listState = settingsListState,
                             contentPadding = contentPadding,
-                            billing = uiState.billing,
                             currency = uiState.currency,
                             themeMode = uiState.themeMode,
                             companyName = uiState.companyName,
@@ -240,7 +204,6 @@ fun FieldLedgerApp(
                             onThemeModeChanged = viewModel::updateThemeMode,
                             onCompanyNameChanged = viewModel::updateCompanyName,
                             onLogoUriChanged = viewModel::updateLogoUri,
-                            onOpenPro = { viewModel.selectTab(FieldLedgerTab.Pro) },
                         )
                     }
                 }
@@ -254,13 +217,11 @@ private fun activeListState(
     dashboardListState: LazyListState,
     formListState: LazyListState,
     historyListState: LazyListState,
-    proListState: LazyListState,
     settingsListState: LazyListState,
 ): LazyListState = when (selectedTab) {
     FieldLedgerTab.Dashboard -> dashboardListState
     FieldLedgerTab.AddJob -> formListState
     FieldLedgerTab.History -> historyListState
-    FieldLedgerTab.Pro -> proListState
     FieldLedgerTab.Settings -> settingsListState
 }
 
@@ -281,7 +242,6 @@ private fun AppBackdrop(
 private fun AppChrome(
     selectedTab: FieldLedgerTab,
     currency: CurrencyOption,
-    isPro: Boolean,
     isEditingDraft: Boolean,
 ) {
     val meta = tabMeta(
@@ -338,17 +298,9 @@ private fun AppChrome(
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 LedgerPill(
-                    label = if (isPro) "Pro active" else "Starter",
-                    containerColor = if (isPro) {
-                        MaterialTheme.colorScheme.tertiaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    },
-                    contentColor = if (isPro) {
-                        MaterialTheme.colorScheme.onTertiaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    },
+                    label = "All features free",
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
         }
@@ -358,7 +310,6 @@ private fun AppChrome(
 @Composable
 private fun FieldLedgerBottomBar(
     selectedTab: FieldLedgerTab,
-    isPro: Boolean,
     onSelect: (FieldLedgerTab) -> Unit,
 ) {
     val items = remember {
@@ -367,7 +318,6 @@ private fun FieldLedgerBottomBar(
             BottomBarItem(FieldLedgerTab.AddJob, "New", Icons.Rounded.PostAdd),
             BottomBarItem(FieldLedgerTab.History, "Jobs", Icons.Rounded.History),
             BottomBarItem(FieldLedgerTab.Settings, "Settings", Icons.Rounded.Settings),
-            BottomBarItem(FieldLedgerTab.Pro, "Pro", Icons.Rounded.Lock),
         )
     }
 
@@ -409,29 +359,15 @@ private fun FieldLedgerBottomBar(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            if (item.tab == FieldLedgerTab.Pro && !isPro) {
-                                BadgedBox(badge = { Badge() }) {
-                                    Icon(
-                                        imageVector = item.icon,
-                                        contentDescription = item.label,
-                                        tint = if (selected) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                    )
-                                }
-                            } else {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.label,
-                                    tint = if (selected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                )
-                            }
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.label,
+                                tint = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
                             Text(
                                 text = item.label,
                                 style = MaterialTheme.typography.labelSmall,
@@ -483,19 +419,8 @@ private fun tabMeta(
         subtitle = "Unpaid, paid, shared, and reminded jobs.",
     )
 
-    FieldLedgerTab.Pro -> TabMeta(
-        title = "Pro",
-        subtitle = "Plans and billing status.",
-    )
-
     FieldLedgerTab.Settings -> TabMeta(
         title = "Settings",
-        subtitle = "Currency and display mode.",
+        subtitle = "Currency, branding, reminders, and display mode.",
     )
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
 }

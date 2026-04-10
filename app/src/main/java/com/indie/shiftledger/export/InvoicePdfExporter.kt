@@ -26,7 +26,6 @@ class InvoicePdfExporter(
         currency: CurrencyOption,
         companyName: String,
         logoUri: String?,
-        isPro: Boolean,
     ): File {
         val exportDir = File(appContext.cacheDir, "invoice-exports").apply { mkdirs() }
         val safeClient = job.clientName.replace(Regex("[^A-Za-z0-9]+"), "-").trim('-')
@@ -40,7 +39,7 @@ class InvoicePdfExporter(
         val page = document.startPage(pageInfo)
         val canvas = page.canvas
         val brandName = companyName.ifBlank { "ShiftLedger" }
-        val logoBitmap = if (isPro) loadLogoBitmap(logoUri) else null
+        val logoBitmap = loadLogoBitmap(logoUri)
 
         val pageWidth = pageInfo.pageWidth.toFloat()
         val contentLeft = 42f
@@ -193,15 +192,6 @@ class InvoicePdfExporter(
             canvas = canvas,
             paint = bodyPaint,
         )
-
-        if (!isPro) {
-            canvas.drawText(
-                "Made with ShiftLedger",
-                pageWidth / 2f,
-                pageInfo.pageHeight - 28f,
-                footerPaint,
-            )
-        }
 
         document.finishPage(page)
         exportFile.outputStream().use(document::writeTo)

@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.indie.shiftledger.billing.BillingUiState
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.DashboardSnapshot
 import com.indie.shiftledger.model.JobRecord
@@ -47,11 +45,7 @@ fun DashboardScreen(
     contentPadding: PaddingValues,
     snapshot: DashboardSnapshot,
     recentJobs: List<JobRecord>,
-    billing: BillingUiState,
     currency: CurrencyOption,
-    jobCount: Int,
-    remainingFreeEntries: Int,
-    onOpenPro: () -> Unit,
 ) {
     LazyColumn(
         modifier = modifier,
@@ -121,54 +115,16 @@ fun DashboardScreen(
             }
         }
 
-        if (!billing.isPro) {
-            item {
-                LedgerPanel(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    borderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.32f),
-                ) {
-                    LedgerSectionHeader(
-                        title = "Free plan",
-                        body = "You can save up to 15 jobs on the free plan.",
-                        trailing = {
-                            LedgerPill(
-                                label = "$remainingFreeEntries left",
-                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                            )
-                        },
-                    )
-                    Text(
-                        text = "$jobCount jobs saved so far.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
-                        Text("See Pro plans")
-                    }
-                }
-            }
-        }
-
         item {
             LedgerPanel {
                 LedgerSectionHeader(
                     title = "Last 4 weeks",
-                    body = if (billing.isPro) {
-                        "A simple view of how your weekly totals are moving."
-                    } else {
-                        "The free plan shows a preview. Pro unlocks the full chart."
-                    },
+                    body = "A simple view of how your weekly totals are moving.",
                 )
-                if (billing.isPro) {
-                    TrendBoard(
-                        trend = snapshot.trend,
-                        currency = currency,
-                    )
-                } else {
-                    LedgerEmptyCard(
-                        title = "4-week chart locked",
-                        body = "Upgrade to Pro to see the full weekly trend.",
-                    )
-                }
+                TrendBoard(
+                    trend = snapshot.trend,
+                    currency = currency,
+                )
             }
         }
 

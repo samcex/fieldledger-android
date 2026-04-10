@@ -40,7 +40,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.indie.shiftledger.billing.BillingUiState
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.ThemeMode
 import com.indie.shiftledger.model.formatCurrency
@@ -57,7 +56,6 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     listState: LazyListState,
     contentPadding: PaddingValues,
-    billing: BillingUiState,
     currency: CurrencyOption,
     themeMode: ThemeMode,
     companyName: String,
@@ -66,7 +64,6 @@ fun SettingsScreen(
     onThemeModeChanged: (ThemeMode) -> Unit,
     onCompanyNameChanged: (String) -> Unit,
     onLogoUriChanged: (String?) -> Unit,
-    onOpenPro: () -> Unit,
 ) {
     val context = LocalContext.current
     val logoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -107,13 +104,7 @@ fun SettingsScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PreferenceHeroPill(label = currency.displayLabel)
                     PreferenceHeroPill(label = themeMode.label)
-                    PreferenceHeroPill(
-                        label = if (billing.isPro) {
-                            if (logoUri == null) "Name only" else "Logo ready"
-                        } else {
-                            "Logo in Pro"
-                        },
-                    )
+                    PreferenceHeroPill(label = if (logoUri == null) "Name only" else "Logo ready")
                 }
             }
         }
@@ -122,7 +113,7 @@ fun SettingsScreen(
             LedgerPanel {
                 LedgerSectionHeader(
                     title = "Invoice branding",
-                    body = "Company name is free. Custom logo and full white-label PDF export are Pro.",
+                    body = "Company name and custom logo both appear on exported invoices.",
                 )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -137,31 +128,20 @@ fun SettingsScreen(
                 LogoPreviewCard(
                     companyName = companyName,
                     logoUri = logoUri,
-                    isPro = billing.isPro,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
                         onClick = {
-                            if (billing.isPro) {
-                                logoPicker.launch(
-                                    arrayOf(
-                                        "image/png",
-                                        "image/jpeg",
-                                        "image/webp",
-                                    ),
-                                )
-                            } else {
-                                onOpenPro()
-                            }
+                            logoPicker.launch(
+                                arrayOf(
+                                    "image/png",
+                                    "image/jpeg",
+                                    "image/webp",
+                                ),
+                            )
                         },
                     ) {
-                        Text(
-                            if (billing.isPro) {
-                                if (logoUri == null) "Choose logo" else "Replace logo"
-                            } else {
-                                "Unlock logo"
-                            },
-                        )
+                        Text(if (logoUri == null) "Choose logo" else "Replace logo")
                     }
                     if (logoUri != null) {
                         OutlinedButton(onClick = { onLogoUriChanged(null) }) {
@@ -170,11 +150,7 @@ fun SettingsScreen(
                     }
                 }
                 Text(
-                    text = if (billing.isPro) {
-                        "PNG, JPG, or WEBP work best. If you skip the logo, the PDF still uses your company name."
-                    } else {
-                        "Free invoices can use your company name. Pro unlocks the logo and removes the ShiftLedger credit."
-                    },
+                    text = "PNG, JPG, or WEBP work best. If you skip the logo, the PDF still uses your company name.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -274,17 +250,9 @@ fun SettingsScreen(
                 Text(text = "Profit ${formatCurrency(2525.30, currency)}", style = MaterialTheme.typography.bodyMedium)
                 Text(
                     text = if (logoUri == null) {
-                        if (billing.isPro) {
-                            "The invoice header will use text only."
-                        } else {
-                            "Free invoices use your company name plus a small ShiftLedger credit."
-                        }
+                        "The invoice header will use text only."
                     } else {
-                        if (billing.isPro) {
-                            "The invoice header will include the selected logo."
-                        } else {
-                            "The saved logo is reserved for Pro invoices."
-                        }
+                        "The invoice header will include the selected logo."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -298,7 +266,6 @@ fun SettingsScreen(
 private fun LogoPreviewCard(
     companyName: String,
     logoUri: String?,
-    isPro: Boolean,
 ) {
     val context = LocalContext.current
     val preview by produceState(
@@ -360,17 +327,9 @@ private fun LogoPreviewCard(
                 )
                 Text(
                     text = preview.displayName ?: if (logoUri == null) {
-                        if (isPro) {
-                            "No logo selected. PDF invoices will use text only."
-                        } else {
-                            "No logo selected. Custom logo is a Pro feature."
-                        }
+                        "No logo selected. PDF invoices will use text only."
                     } else {
-                        if (isPro) {
-                            "Logo selected for PDF invoices."
-                        } else {
-                            "Logo saved, but it will only appear on Pro invoices."
-                        }
+                        "Logo selected for PDF invoices."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

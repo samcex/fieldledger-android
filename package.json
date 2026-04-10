@@ -4,9 +4,5 @@
   "type": "module",
   "scripts": {
     "test:web": "node --test webapp/tests/*.test.mjs"
-  },
-  "dependencies": {
-    "@netlify/functions": "^5.2.0",
-    "stripe": "^22.0.1"
   }
 }

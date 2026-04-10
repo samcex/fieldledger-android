@@ -9,15 +9,14 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 - Keep an offline history of all logged work
 - Guide first-time users through a lightweight onboarding flow
 - Support multiple customer-facing currencies from Settings
-- Prepare a monetization path through Google Play subscriptions
+- Export branded PDF invoices and keep reminder follow-up simple
 
 ## Repo Contents
 
 - Kotlin + Jetpack Compose Android app
 - Browser-based web app in [`webapp/index.html`](/root/shiftledger-android/webapp/index.html)
 - Room persistence for local-first job storage
-- Google Play Billing integration with backend-verification client
-- Node backend verifier in [`backend/README.md`](/root/shiftledger-android/backend/README.md)
+- Optional Android billing verifier kept in-repo for future experiments in [`backend/README.md`](/root/shiftledger-android/backend/README.md)
 - Monetization notes in [`docs/monetization-strategy.md`](/root/shiftledger-android/docs/monetization-strategy.md)
 - Play Store copy and asset source files in [`docs/play-store/listing.md`](/root/shiftledger-android/docs/play-store/listing.md)
 - Release signing guide in [`docs/release-signing.md`](/root/shiftledger-android/docs/release-signing.md)
@@ -29,11 +28,11 @@ FieldLedger is an offline-first Android app for solo tradespeople and field-serv
 - First-launch onboarding with default currency selection
 - Job entry form with live invoice/profit preview, due date, and reminder fields
 - Job pipeline/history screen with invoice export and reminder actions
-- Settings screen for currency preferences
-- Responsive web app with matching onboarding, dashboard, job entry, history, settings, and paywall flows
+- Settings screen for currency, branding, and theme preferences
+- Responsive web app with matching onboarding, dashboard, job entry, history, and settings flows
 - PDF invoice summary export and share flow
 - Local unpaid reminder notifications
-- Google Play subscription paywall wired for backend verification
+- Custom logo support on invoice exports in both Android and web
 - Release-signed AAB path for Play Console uploads
 - Debug APK build for device testing
 
@@ -43,8 +42,7 @@ The repository can produce both a release-signed `.aab` for Play Console and a d
 
 Important limits:
 
-- Billing requires a configured backend verifier URL for real Pro unlocks
-- The included backend is shipped in-repo but not deployed for you
+- The optional backend is shipped in-repo but not deployed for you
 - Local signing material must stay private and out of git
 
 ## Build Requirements
@@ -77,17 +75,8 @@ Then open `http://localhost:8787`.
 The repository now includes [`netlify.toml`](/root/shiftledger-android/netlify.toml) for the web app.
 
 - Publish directory: `webapp`
-- Functions directory: `netlify/functions`
-- Netlify installs the root [`package.json`](/root/shiftledger-android/package.json) for Stripe + Netlify Functions
 - SPA routes are redirected to `index.html`
-- `/api/web-config` and `/api/stripe/*` are served by Netlify Functions in production
-
-Set these Netlify environment variables to enable web payments:
-
-- `STRIPE_SECRET_KEY`
-- `STRIPE_MONTHLY_PRICE_ID`
-- `STRIPE_YEARLY_PRICE_ID`
-- `FIELDLEDGER_WEB_FORCE_PRO` optional preview override
+- No Netlify environment variables are required for the current free web app
 
 Outputs:
 
@@ -98,17 +87,16 @@ app/build/outputs/bundle/release/app-release.aab
 
 ## Why This Product
 
-The app is intentionally a niche utility, not an ad-first mass-market bet. The goal is to solve a recurring admin pain for tradespeople first, then monetize the workflow once it becomes sticky.
+The app is intentionally a niche utility, not an ad-first mass-market bet. The goal is to solve a recurring admin pain for tradespeople first and learn whether the workflow becomes sticky before reintroducing pricing decisions.
 
 Reference material:
 
 - Google Play Billing integration: https://developer.android.com/google/play/billing/integrate.html
 - Google Play in-app products: https://support.google.com/googleplay/android-developer/answer/1153481?hl=en
-- RevenueCat 2026 subscription benchmarks: https://www.revenuecat.com/state-of-subscription-apps-2026-shopping/
 
 ## Next Steps
 
-1. Deploy the bundled billing backend and connect it to a real Play Console app.
+1. Deploy the web app on Netlify and measure activation and repeat usage.
 2. Export the branded SVG store assets to final PNGs for Play Console.
-3. Add edit/update flows for saved jobs and reminders.
-4. Add CSV export or email invoice delivery if you want a stronger upsell than static PDF share.
+3. Add CSV export or email invoice delivery if operators ask for it.
+4. Revisit subscriptions later if usage justifies it.

@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.indie.shiftledger.billing.BillingUiState
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.InvoiceStatus
 import com.indie.shiftledger.model.JobDraft
@@ -64,18 +63,13 @@ fun JobFormScreen(
     listState: LazyListState,
     contentPadding: PaddingValues,
     draft: JobDraft,
-    billing: BillingUiState,
     currency: CurrencyOption,
-    jobCount: Int,
-    remainingFreeEntries: Int,
     isEditing: Boolean,
     onDraftChange: ((JobDraft) -> JobDraft) -> Unit,
     onSave: () -> Unit,
     onCancelEdit: () -> Unit,
-    onOpenPro: () -> Unit,
 ) {
     val preview = draft.preview()
-    val limitReached = !billing.isPro && !isEditing && remainingFreeEntries == 0
     var showJobDetails by rememberSaveable {
         mutableStateOf(draft.siteAddress.isNotBlank() || draft.workSummary.isNotBlank())
     }
@@ -125,7 +119,7 @@ fun JobFormScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     HeroDraftPill(label = "Currency ${currency.code}")
-                    HeroDraftPill(label = if (billing.isPro) "Pro active" else "$remainingFreeEntries free left")
+                    HeroDraftPill(label = "Ready to save")
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     DraftHeroMetric(label = "Profit", value = formatCurrency(preview.estimatedProfit, currency))
@@ -162,13 +156,6 @@ fun JobFormScreen(
                         label = "Total costs",
                         value = formatCurrency(preview.totalCosts, currency),
                         supporting = "Materials cost plus travel",
-                    )
-                }
-                if (!billing.isPro) {
-                    Text(
-                        text = "$jobCount of 15 starter jobs used.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -440,22 +427,12 @@ fun JobFormScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (limitReached) {
-                    Text(
-                        text = "The free plan limit is reached. Move to Pro to keep saving jobs.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Button(onClick = onOpenPro, modifier = Modifier.fillMaxWidth()) {
-                        Text("Unlock Pro")
-                    }
-                } else {
-                    Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (isEditing) "Update job" else "Save job")
-                    }
-                    if (draft.isEditing) {
-                        Button(onClick = onCancelEdit, modifier = Modifier.fillMaxWidth()) {
-                            Text("Cancel edit")
-                        }
+                Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (isEditing) "Update job" else "Save job")
+                }
+                if (draft.isEditing) {
+                    Button(onClick = onCancelEdit, modifier = Modifier.fillMaxWidth()) {
+                        Text("Cancel edit")
                     }
                 }
             }

@@ -1,6 +1,5 @@
 package com.indie.shiftledger
 
-import android.app.Activity
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -12,11 +11,9 @@ import com.indie.shiftledger.data.JobRepository
 import com.indie.shiftledger.data.SettingsRepository
 import com.indie.shiftledger.model.CurrencyOption
 import com.indie.shiftledger.model.DashboardSnapshot
-import com.indie.shiftledger.model.DisplayOffer
 import com.indie.shiftledger.model.InvoiceStatus
 import com.indie.shiftledger.model.JobDraft
 import com.indie.shiftledger.model.JobRecord
-import com.indie.shiftledger.model.MonetizationPlan
 import com.indie.shiftledger.model.ThemeMode
 import com.indie.shiftledger.model.asDraft
 import com.indie.shiftledger.model.isEditing
@@ -147,12 +144,6 @@ class FieldLedgerViewModel(
 
     fun saveDraft() {
         val state = uiState.value
-        if (!state.billing.isPro && !state.draft.isEditing && state.jobs.size >= MonetizationPlan.freeJobLimit) {
-            selectedTab.value = FieldLedgerTab.Pro
-            snackMessage.value = "Free plan limit reached. Upgrade to keep adding jobs."
-            return
-        }
-
         val validation = state.draft.validate()
         val job = validation.job
         if (job == null) {
@@ -262,20 +253,8 @@ class FieldLedgerViewModel(
         }
     }
 
-    fun refreshBilling() {
-        billingRepository.refreshEntitlements()
-    }
-
     fun dismissMessage() {
         snackMessage.value = null
-    }
-
-    fun proOfferByProductId(productId: String): DisplayOffer? {
-        return uiState.value.billing.offers.firstOrNull { it.productId == productId }
-    }
-
-    fun launchPurchase(activity: Activity, offer: DisplayOffer) {
-        billingRepository.launchPurchase(activity, offer)
     }
 
     override fun onCleared() {
@@ -317,9 +296,6 @@ data class FieldLedgerUiState(
     val draft: JobDraft = JobDraft(),
     val snackbarMessage: String? = null,
 ) {
-    val remainingFreeEntries: Int
-        get() = (MonetizationPlan.freeJobLimit - jobs.size).coerceAtLeast(0)
-
     val isEditingDraft: Boolean
         get() = draft.isEditing
 }
@@ -328,6 +304,5 @@ enum class FieldLedgerTab {
     Dashboard,
     AddJob,
     History,
-    Pro,
     Settings,
 }

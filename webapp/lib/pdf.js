@@ -78,10 +78,10 @@ function scaleToFit(width, height, maxWidth, maxHeight) {
   };
 }
 
-async function renderInvoiceCanvas({ job, currencyCode, companyName, logoDataUrl, isPro }) {
+async function renderInvoiceCanvas({ job, currencyCode, companyName, logoDataUrl }) {
   const enriched = enrichJob(job);
   const brandName = String(companyName ?? "").trim() || "ShiftLedger";
-  const logoImage = isPro ? await loadImage(logoDataUrl) : null;
+  const logoImage = await loadImage(logoDataUrl);
   const pricingMode = getPricingMode(enriched.pricingMode);
   const canvas = createCanvas();
   const context = canvas.getContext("2d");
@@ -210,14 +210,6 @@ async function renderInvoiceCanvas({ job, currencyCode, companyName, logoDataUrl
     CANVAS_WIDTH - 184,
     40,
   );
-
-  if (!isPro) {
-    context.font = "400 22px 'Avenir Next', 'Trebuchet MS', sans-serif";
-    context.fillStyle = "#64748b";
-    context.textAlign = "center";
-    context.fillText("Made with ShiftLedger", CANVAS_WIDTH / 2, CANVAS_HEIGHT - 55);
-    context.textAlign = "left";
-  }
 
   return canvas;
 }

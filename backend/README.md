@@ -1,6 +1,6 @@
-# FieldLedger Billing Backend
+# FieldLedger Preview Backend
 
-This backend verifies Google Play subscription purchases before the Android app grants `Pro`.
+This backend can still verify Google Play subscription purchases for future Android experiments, but the live app is currently free.
 
 It also serves the browser-based FieldLedger web app from `../webapp`.
 
@@ -8,7 +8,7 @@ It also serves the browser-based FieldLedger web app from `../webapp`.
 
 - Accepts the app package name, purchase token, and product IDs from the Android client
 - Calls Google Play Developer API `purchases.subscriptionsv2.get`
-- Returns a compact entitlement response that the app uses to decide whether `Pro` is active
+- Returns a compact entitlement response if you later decide to re-enable billing
 
 ## Local Setup
 
@@ -32,13 +32,9 @@ The server starts on `http://localhost:8787` by default.
 
 Open `http://localhost:8787` after the backend starts to load the web app.
 
-Optional preview flags:
+The production Netlify deploy is now a static publish from `webapp`, so this backend is only needed for local preview or future billing experiments.
 
-- `FIELDLEDGER_WEB_FORCE_PRO=true` unlocks Pro-only web features for internal testing
-
-The production web payment flow now targets Netlify Functions plus Stripe. The local Express server still serves the web app for preview, but Stripe checkout itself is intended to run from the Netlify deployment.
-
-## Android App Configuration
+## Android Billing Configuration
 
 Point the Android client at the backend by setting either:
 
