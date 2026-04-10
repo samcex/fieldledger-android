@@ -55,31 +55,10 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/web-config", (_req, res) => {
-  const yearlyCheckoutUrl = process.env.FIELDLEDGER_WEB_YEARLY_CHECKOUT_URL || null;
-  const monthlyCheckoutUrl = process.env.FIELDLEDGER_WEB_MONTHLY_CHECKOUT_URL || null;
-  const forcePro = ["1", "true", "yes"].includes(
-    String(process.env.FIELDLEDGER_WEB_FORCE_PRO || "").toLowerCase(),
-  );
-
+app.get("/api/public-config", (_req, res) => {
   res.json({
-    forcePro,
-    offers: [
-      {
-        productId: "field_ledger_pro_yearly",
-        title: "Pro Yearly",
-        description: "Best value for solo operators who invoice every week",
-        price: "$59.99 / year",
-        purchaseUrl: yearlyCheckoutUrl,
-      },
-      {
-        productId: "field_ledger_pro_monthly",
-        title: "Pro Monthly",
-        description: "Lower commitment while testing the workflow",
-        price: "$6.99 / month",
-        purchaseUrl: monthlyCheckoutUrl,
-      },
-    ],
+    supabaseUrl: process.env.SUPABASE_URL || null,
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || null,
   });
 });
 
@@ -179,5 +158,5 @@ app.use((req, res, next) => {
 
 const port = Number(process.env.PORT || 8787);
 app.listen(port, () => {
-  console.log(`FieldLedger billing backend listening on :${port}`);
+  console.log(`FieldLedger preview backend listening on :${port}`);
 });

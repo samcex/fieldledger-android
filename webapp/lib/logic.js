@@ -60,6 +60,8 @@ function todayIso() {
 function createDefaultDraft() {
   return {
     id: 0,
+    cloudId: null,
+    updatedAt: "",
     clientName: "",
     jobName: "",
     siteAddress: "",
@@ -315,6 +317,8 @@ function validateDraft(draft) {
   return {
     job: enrichJob({
       id: Number(draft.id ?? 0),
+      cloudId: draft.cloudId ? String(draft.cloudId) : null,
+      updatedAt: new Date().toISOString(),
       clientName,
       jobName,
       siteAddress: String(draft.siteAddress ?? "").trim(),
@@ -342,6 +346,8 @@ function jobToDraft(job) {
   const enriched = enrichJob(job);
   return {
     id: enriched.id,
+    cloudId: enriched.cloudId,
+    updatedAt: enriched.updatedAt,
     clientName: enriched.clientName,
     jobName: enriched.jobName,
     siteAddress: enriched.siteAddress,
@@ -388,6 +394,8 @@ function enrichJob(job) {
 
   return {
     id: Number(job.id ?? 0),
+    cloudId: job.cloudId ? String(job.cloudId) : null,
+    updatedAt: job.updatedAt ? String(job.updatedAt) : new Date().toISOString(),
     clientName: String(job.clientName ?? ""),
     jobName: String(job.jobName ?? ""),
     siteAddress: String(job.siteAddress ?? ""),

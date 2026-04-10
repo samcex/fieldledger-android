@@ -18,7 +18,10 @@ It also serves the browser-based FieldLedger web app from `../webapp`.
    - `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json`, or
    - `GOOGLE_SERVICE_ACCOUNT_JSON={...}`
 4. Set `PLAY_PACKAGE_NAME=com.indie.shiftledger`
-5. Install and run:
+5. Optional for web login preview:
+   - `SUPABASE_URL=https://your-project.supabase.co`
+   - `SUPABASE_ANON_KEY=your-public-anon-key`
+6. Install and run:
 
 ```bash
 cd backend
@@ -32,7 +35,7 @@ The server starts on `http://localhost:8787` by default.
 
 Open `http://localhost:8787` after the backend starts to load the web app.
 
-The production Netlify deploy is now a static publish from `webapp`, so this backend is only needed for local preview or future billing experiments.
+The production Netlify deploy is a static publish from `webapp` plus a small Netlify Function at `/api/public-config` for public Supabase auth config. This backend is only needed for local preview or future billing experiments.
 
 ## Android Billing Configuration
 

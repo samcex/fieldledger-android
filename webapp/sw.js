@@ -6,6 +6,7 @@ const APP_ASSETS = [
   "/app.js",
   "/manifest.webmanifest",
   "/assets/icon.svg",
+  "/lib/cloud.js",
   "/lib/logic.js",
   "/lib/store.js",
   "/lib/pdf.js",

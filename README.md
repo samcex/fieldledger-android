@@ -76,7 +76,8 @@ The repository now includes [`netlify.toml`](/root/shiftledger-android/netlify.t
 
 - Publish directory: `webapp`
 - SPA routes are redirected to `index.html`
-- No Netlify environment variables are required for the current free web app
+- Netlify Functions expose public Supabase config at `/api/public-config`
+- Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in Netlify if you want Google login, email login, and cloud sync
 
 Outputs:
 
@@ -84,6 +85,60 @@ Outputs:
 app/build/outputs/apk/debug/app-debug.apk
 app/build/outputs/bundle/release/app-release.aab
 ```
+
+## Web Auth And Sync
+
+The web app can stay fully local, or you can turn on account sync with Supabase.
+
+What syncs:
+
+- Google login
+- Email and password login
+- Jobs in a small `jobs` table
+- Company name, currency, and theme in a `profiles` table
+
+What stays local:
+
+- Invoice logo image data
+
+### Supabase Setup
+
+1. Create a Supabase project.
+2. In SQL Editor, run [`supabase/schema.sql`](/root/shiftledger-android/supabase/schema.sql).
+3. In Auth providers, enable `Google` and add the Google OAuth client ID and secret from Google Cloud.
+4. In Auth providers, keep `Email` enabled. On hosted Supabase, email confirmation is enabled by default.
+5. In URL Configuration, set:
+   - Site URL to your production Netlify URL
+   - Redirect URLs to include your production URL and local preview URL
+6. Add these Netlify environment variables:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+
+Recommended redirect URLs:
+
+- `https://your-site.netlify.app/**`
+- `http://localhost:8787/**`
+
+If you use Netlify preview deploys, add the appropriate preview wildcard for that site as well. Supabase documents wildcard redirect URLs for preview environments.
+
+### Local Preview
+
+To test the web app with login locally, add the same public Supabase values to [`backend/.env.example`](/root/shiftledger-android/backend/.env.example) via your local `.env`:
+
+```bash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-public-anon-key
+```
+
+Then run:
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+Open `http://localhost:8787`, go to Settings, and sign in there.
 
 ## Why This Product
 

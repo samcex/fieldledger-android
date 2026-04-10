@@ -3,6 +3,7 @@ import { createDefaultDraft, getThemeMode, sortJobsForStorage } from "./logic.js
 const STORAGE_KEYS = {
   jobs: "fieldledger.web.jobs",
   settings: "fieldledger.web.settings",
+  cloudSync: "fieldledger.web.cloud-sync",
   installPromptDismissed: "fieldledger.web.installPromptDismissed",
 };
 
@@ -78,6 +79,23 @@ function loadDraft() {
   return createDefaultDraft();
 }
 
+function loadCloudSyncState() {
+  const storage = getStorage();
+  const parsed = safeJsonParse(storage?.getItem(STORAGE_KEYS.cloudSync), {});
+  return {
+    pendingDeleteCloudIds: Array.isArray(parsed?.pendingDeleteCloudIds)
+      ? parsed.pendingDeleteCloudIds.filter((value) => typeof value === "string" && value.length > 0)
+      : [],
+    lastSyncedAt: parsed?.lastSyncedAt || null,
+  };
+}
+
+function saveCloudSyncState(value) {
+  const storage = getStorage();
+  if (!storage) return;
+  storage.setItem(STORAGE_KEYS.cloudSync, JSON.stringify(value));
+}
+
 function loadInstallPromptDismissed() {
   const storage = getStorage();
   return storage?.getItem(STORAGE_KEYS.installPromptDismissed) === "true";
@@ -91,10 +109,12 @@ function saveInstallPromptDismissed(value) {
 
 export {
   defaultSettings,
+  loadCloudSyncState,
   loadDraft,
   loadInstallPromptDismissed,
   loadJobs,
   loadSettings,
+  saveCloudSyncState,
   saveInstallPromptDismissed,
   saveJobs,
   saveSettings,

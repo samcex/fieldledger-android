@@ -26,14 +26,34 @@ import {
 } from "./lib/logic.js";
 import {
   loadInstallPromptDismissed,
+  loadCloudSyncState,
   loadJobs,
   loadSettings,
+  saveCloudSyncState,
   saveInstallPromptDismissed,
   saveJobs,
   saveSettings,
 } from "./lib/store.js";
 import { downloadInvoicePdf } from "./lib/pdf.js";
 import { createReminderEngine } from "./lib/reminders.js";
+import {
+  authErrorMessage,
+  compareIsoTimes,
+  deleteCloudJob,
+  deserializeCloudJob,
+  fetchCloudProfile,
+  getCurrentUser,
+  hasAuthConfig,
+  listCloudJobs,
+  onAuthChange,
+  randomId,
+  signInWithEmail,
+  signInWithGoogle,
+  signOut,
+  signUpWithEmail,
+  upsertCloudJob,
+  upsertCloudProfile,
+} from "./lib/cloud.js";
 
 const appElement = document.querySelector("#app");
 const logoInput = document.createElement("input");
@@ -49,7 +69,29 @@ const reminderEngine = createReminderEngine({
 const state = {
   jobs: sortJobsForStorage(loadJobs()),
   settings: loadSettings(),
+  cloudSync: loadCloudSyncState(),
+  publicConfig: {
+    supabaseUrl: null,
+    supabaseAnonKey: null,
+  },
   billing: createBillingState(),
+  auth: {
+    isConfigured: false,
+    isReady: false,
+    isBusy: false,
+    isSyncing: false,
+    user: null,
+    statusMessage: "Account sync is optional.",
+    lastSyncedAt: null,
+    remoteJobCount: 0,
+    unsubscribe: null,
+    jobsSyncTimer: null,
+    profileSyncTimer: null,
+  },
+  authForm: {
+    email: "",
+    password: "",
+  },
   selectedTab: TABS.DASHBOARD,
   draft: createDefaultDraft(),
   formUi: deriveFormUi(createDefaultDraft()),
@@ -97,9 +139,296 @@ function persistSettings() {
   saveSettings(state.settings);
 }
 
+function persistCloudState() {
+  saveCloudSyncState(state.cloudSync);
+}
+
 function persistJobs() {
   saveJobs(state.jobs);
   reminderEngine.sync(state.jobs);
+  queueJobsSync();
+}
+
+function hasCloudAuth() {
+  return hasAuthConfig(state.publicConfig);
+}
+
+function authRedirectUrl() {
+  const url = new URL(window.location.origin);
+  url.searchParams.set("tab", TABS.SETTINGS);
+  return url.toString();
+}
+
+function nextLocalJobIdFrom(jobs) {
+  return jobs.reduce((highest, job) => Math.max(highest, Number(job.id ?? 0)), 0) + 1;
+}
+
+function normalizeJobForSync(job, fallbackId = 0) {
+  return enrichJob({
+    ...job,
+    id: Number(job.id ?? fallbackId),
+    cloudId: job.cloudId ? String(job.cloudId) : null,
+    updatedAt: job.updatedAt ? String(job.updatedAt) : new Date().toISOString(),
+  });
+}
+
+function replaceAllJobs(nextJobs, { persist = true } = {}) {
+  state.jobs = sortJobsForStorage(nextJobs.map((job, index) => normalizeJobForSync(job, index + 1)));
+  if (persist) {
+    saveJobs(state.jobs);
+    reminderEngine.sync(state.jobs);
+  }
+}
+
+function queueProfileSync() {
+  if (!state.auth.user) return;
+  if (state.auth.profileSyncTimer) {
+    clearTimeout(state.auth.profileSyncTimer);
+  }
+  state.auth.profileSyncTimer = setTimeout(() => {
+    state.auth.profileSyncTimer = null;
+    syncProfileToCloud();
+  }, 700);
+}
+
+function queueJobsSync() {
+  if (!state.auth.user) return;
+  if (state.auth.jobsSyncTimer) {
+    clearTimeout(state.auth.jobsSyncTimer);
+  }
+  state.auth.jobsSyncTimer = setTimeout(() => {
+    state.auth.jobsSyncTimer = null;
+    syncJobsWithCloud();
+  }, 500);
+}
+
+function applyRemoteProfileToSettings(profile) {
+  if (!profile) return;
+  state.settings = {
+    ...state.settings,
+    currencyCode: profile.currency_code || state.settings.currencyCode,
+    themeMode: profile.theme_mode || state.settings.themeMode,
+    companyName: profile.company_name || "",
+  };
+  persistSettings();
+}
+
+async function syncProfileToCloud() {
+  if (!state.auth.user) return false;
+
+  try {
+    await upsertCloudProfile(state.publicConfig, {
+      userId: state.auth.user.id,
+      email: state.auth.user.email || "",
+      companyName: state.settings.companyName,
+      currencyCode: state.settings.currencyCode,
+      themeMode: state.settings.themeMode,
+    });
+    return true;
+  } catch (error) {
+    state.auth.statusMessage = authErrorMessage(error, "Could not sync account settings.");
+    queueRender();
+    return false;
+  }
+}
+
+async function flushPendingDeletes() {
+  if (!state.auth.user || state.cloudSync.pendingDeleteCloudIds.length === 0) {
+    return;
+  }
+
+  const remaining = [];
+  for (const cloudId of state.cloudSync.pendingDeleteCloudIds) {
+    try {
+      await deleteCloudJob(state.publicConfig, state.auth.user.id, cloudId);
+    } catch (_error) {
+      remaining.push(cloudId);
+    }
+  }
+
+  state.cloudSync = {
+    ...state.cloudSync,
+    pendingDeleteCloudIds: remaining,
+  };
+  persistCloudState();
+}
+
+async function syncJobsWithCloud() {
+  if (!state.auth.user || state.auth.isSyncing) return false;
+
+  state.auth.isSyncing = true;
+  state.auth.statusMessage = "Syncing jobs to the cloud...";
+  queueRender();
+
+  try {
+    const remoteProfile = await fetchCloudProfile(state.publicConfig, state.auth.user.id);
+    if (remoteProfile) {
+      applyRemoteProfileToSettings(remoteProfile);
+    } else {
+      await syncProfileToCloud();
+    }
+
+    await flushPendingDeletes();
+
+    const remoteRows = await listCloudJobs(state.publicConfig, state.auth.user.id);
+    const remoteByCloudId = new Map(remoteRows.map((row) => [String(row.id), row]));
+    const normalizedLocalJobs = state.jobs.map((job) => normalizeJobForSync(job));
+    const mergedJobs = [];
+    let nextLocalId = nextLocalJobIdFrom(normalizedLocalJobs);
+
+    for (const localJob of normalizedLocalJobs) {
+      if (!localJob.cloudId) {
+        const syncedRow = await upsertCloudJob(state.publicConfig, state.auth.user.id, {
+          ...localJob,
+          cloudId: randomId(),
+        });
+        const syncedJob = normalizeJobForSync(
+          {
+            ...localJob,
+            cloudId: syncedRow.id,
+            updatedAt: syncedRow.updated_at,
+          },
+          localJob.id,
+        );
+        mergedJobs.push(syncedJob);
+        remoteByCloudId.set(syncedJob.cloudId, syncedRow);
+        continue;
+      }
+
+      const remoteRow = remoteByCloudId.get(localJob.cloudId);
+      if (!remoteRow) {
+        const syncedRow = await upsertCloudJob(state.publicConfig, state.auth.user.id, localJob);
+        mergedJobs.push(
+          normalizeJobForSync(
+            {
+              ...localJob,
+              updatedAt: syncedRow.updated_at,
+            },
+            localJob.id,
+          ),
+        );
+        remoteByCloudId.set(localJob.cloudId, syncedRow);
+        continue;
+      }
+
+      const remoteUpdatedAt = String(remoteRow.updated_at ?? "");
+      if (compareIsoTimes(localJob.updatedAt, remoteUpdatedAt) >= 0) {
+        if (compareIsoTimes(localJob.updatedAt, remoteUpdatedAt) > 0) {
+          const syncedRow = await upsertCloudJob(state.publicConfig, state.auth.user.id, localJob);
+          mergedJobs.push(
+            normalizeJobForSync(
+              {
+                ...localJob,
+                updatedAt: syncedRow.updated_at,
+              },
+              localJob.id,
+            ),
+          );
+          remoteByCloudId.set(localJob.cloudId, syncedRow);
+        } else {
+          mergedJobs.push(localJob);
+        }
+      } else {
+        mergedJobs.push(deserializeCloudJob(remoteRow, localJob.id));
+      }
+    }
+
+    const seenCloudIds = new Set(mergedJobs.map((job) => job.cloudId).filter(Boolean));
+    for (const remoteRow of remoteByCloudId.values()) {
+      if (seenCloudIds.has(String(remoteRow.id))) continue;
+      mergedJobs.push(deserializeCloudJob(remoteRow, nextLocalId));
+      nextLocalId += 1;
+    }
+
+    replaceAllJobs(mergedJobs);
+    state.cloudSync = {
+      ...state.cloudSync,
+      lastSyncedAt: new Date().toISOString(),
+    };
+    persistCloudState();
+
+    state.auth.remoteJobCount = remoteByCloudId.size;
+    state.auth.lastSyncedAt = state.cloudSync.lastSyncedAt;
+    state.auth.statusMessage = `Cloud sync active for ${state.auth.user.email || "this account"}.`;
+    return true;
+  } catch (error) {
+    state.auth.statusMessage = authErrorMessage(error, "Could not sync jobs right now.");
+    return false;
+  } finally {
+    state.auth.isSyncing = false;
+    queueRender();
+  }
+}
+
+async function loadPublicConfig() {
+  const fallbackConfig = {
+    supabaseUrl: null,
+    supabaseAnonKey: null,
+  };
+
+  try {
+    const response = await fetch("/api/public-config");
+    if (!response.ok) {
+      throw new Error("Config request failed.");
+    }
+    const data = await response.json();
+    state.publicConfig = {
+      supabaseUrl: data.supabaseUrl || null,
+      supabaseAnonKey: data.supabaseAnonKey || null,
+    };
+  } catch (_error) {
+    state.publicConfig = fallbackConfig;
+  }
+
+  state.auth.isConfigured = hasCloudAuth();
+  if (!state.auth.isConfigured) {
+    state.auth.isReady = true;
+    state.auth.statusMessage = "Set Supabase public keys to enable account sync.";
+  }
+  queueRender();
+}
+
+async function handleAuthUserChanged(user, message = null) {
+  state.auth.user = user;
+  state.auth.isReady = true;
+  state.auth.remoteJobCount = user ? state.auth.remoteJobCount : 0;
+  state.auth.statusMessage =
+    message ||
+    (user
+      ? `Signed in as ${user.email || "account user"}.`
+      : state.auth.isConfigured
+        ? "Sign in to back up jobs across devices."
+        : "Set Supabase public keys to enable account sync.");
+  queueRender();
+
+  if (!user) {
+    return;
+  }
+
+  await syncJobsWithCloud();
+}
+
+async function initializeAuth() {
+  if (!state.auth.isConfigured) return;
+
+  state.auth.isReady = false;
+  state.auth.statusMessage = "Checking account session...";
+  queueRender();
+
+  if (!state.auth.unsubscribe) {
+    state.auth.unsubscribe = await onAuthChange(state.publicConfig, (user) => {
+      handleAuthUserChanged(user);
+    });
+  }
+
+  try {
+    const user = await getCurrentUser(state.publicConfig);
+    await handleAuthUserChanged(user);
+  } catch (error) {
+    state.auth.isReady = true;
+    state.auth.statusMessage = authErrorMessage(error, "Could not check the current account session.");
+    queueRender();
+  }
 }
 
 function normalizeUrlState() {
@@ -208,6 +537,9 @@ function updateSetting(field, value) {
     [field]: value,
   };
   persistSettings();
+  if (["currencyCode", "themeMode", "companyName"].includes(field)) {
+    queueProfileSync();
+  }
   queueRender();
 }
 
@@ -217,17 +549,26 @@ function findJob(jobId) {
 
 function replaceJob(updatedJob) {
   const nextJobs = [...state.jobs];
-  const index = nextJobs.findIndex((job) => Number(job.id) === Number(updatedJob.id));
+  const normalizedJob = normalizeJobForSync(updatedJob, nextJobId(state.jobs));
+  const index = nextJobs.findIndex((job) => Number(job.id) === Number(normalizedJob.id));
   if (index >= 0) {
-    nextJobs[index] = updatedJob;
+    nextJobs[index] = normalizedJob;
   } else {
-    nextJobs.push(updatedJob);
+    nextJobs.push(normalizedJob);
   }
   state.jobs = sortJobsForStorage(nextJobs);
   persistJobs();
 }
 
 function removeJob(jobId) {
+  const existingJob = findJob(jobId);
+  if (existingJob?.cloudId && !state.cloudSync.pendingDeleteCloudIds.includes(existingJob.cloudId)) {
+    state.cloudSync = {
+      ...state.cloudSync,
+      pendingDeleteCloudIds: [...state.cloudSync.pendingDeleteCloudIds, existingJob.cloudId],
+    };
+    persistCloudState();
+  }
   state.jobs = sortJobsForStorage(state.jobs.filter((job) => Number(job.id) !== Number(jobId)));
   persistJobs();
 }
@@ -362,9 +703,98 @@ function handleContinueOnboarding() {
   showToast("Ready to log the first job.");
 }
 
-async function loadServerConfig() {
-  state.billing = createBillingState();
-  queueRender();
+function validateAuthForm() {
+  const email = String(state.authForm.email ?? "").trim();
+  const password = String(state.authForm.password ?? "");
+
+  if (!email) {
+    throw new Error("Add an email address.");
+  }
+  if (!password) {
+    throw new Error("Add a password.");
+  }
+  if (password.length < 6) {
+    throw new Error("Use a password with at least 6 characters.");
+  }
+
+  return { email, password };
+}
+
+async function handleEmailSignIn() {
+  try {
+    const { email, password } = validateAuthForm();
+    state.auth.isBusy = true;
+    state.auth.statusMessage = "Signing in...";
+    queueRender();
+    await signInWithEmail(state.publicConfig, email, password);
+    showToast("Signed in.");
+  } catch (error) {
+    const message = authErrorMessage(error, "Could not sign in.");
+    state.auth.statusMessage = message;
+    showToast(message);
+  } finally {
+    state.auth.isBusy = false;
+    queueRender();
+  }
+}
+
+async function handleEmailSignUp() {
+  try {
+    const { email, password } = validateAuthForm();
+    state.auth.isBusy = true;
+    state.auth.statusMessage = "Creating account...";
+    queueRender();
+    const result = await signUpWithEmail(state.publicConfig, email, password, authRedirectUrl());
+    if (result.hasSession) {
+      showToast("Account created.");
+    } else {
+      showToast("Account created. Check your email to confirm it if confirmation is enabled.");
+    }
+  } catch (error) {
+    const message = authErrorMessage(error, "Could not create the account.");
+    state.auth.statusMessage = message;
+    showToast(message);
+  } finally {
+    state.auth.isBusy = false;
+    queueRender();
+  }
+}
+
+async function handleGoogleSignIn() {
+  try {
+    state.auth.isBusy = true;
+    state.auth.statusMessage = "Redirecting to Google...";
+    queueRender();
+    await signInWithGoogle(state.publicConfig, authRedirectUrl());
+  } catch (error) {
+    const message = authErrorMessage(error, "Could not start Google sign-in.");
+    state.auth.statusMessage = message;
+    state.auth.isBusy = false;
+    showToast(message);
+    queueRender();
+  }
+}
+
+async function handleAccountSignOut() {
+  try {
+    state.auth.isBusy = true;
+    state.auth.statusMessage = "Signing out...";
+    queueRender();
+    await signOut(state.publicConfig);
+    showToast("Signed out.");
+  } catch (error) {
+    const message = authErrorMessage(error, "Could not sign out.");
+    state.auth.statusMessage = message;
+    showToast(message);
+  } finally {
+    state.auth.isBusy = false;
+    queueRender();
+  }
+}
+
+async function handleManualCloudSync() {
+  const didSync = await syncJobsWithCloud();
+  showToast(didSync ? "Cloud sync complete." : state.auth.statusMessage);
 }
 
 function applyTheme() {
@@ -446,6 +876,11 @@ function renderCurrencySelect(scope, selectedCode) {
 
 function renderTopBar() {
   const meta = createTabMeta(state.selectedTab, isEditingDraft(state.draft));
+  const accountLabel = state.auth.user
+    ? state.auth.user.email || "Cloud sync on"
+    : state.auth.isConfigured
+      ? "Offline only"
+      : "No account sync";
   return `
     <header class="topbar">
       <div>
@@ -456,6 +891,7 @@ function renderTopBar() {
       <div class="topbar-pills">
         ${renderPill(state.settings.currencyCode, "primary")}
         ${renderPill("All features free", "success")}
+        ${renderPill(accountLabel, state.auth.user ? "success" : "soft")}
         ${
           state.installPromptEvent && !state.installPromptDismissed
             ? `<button type="button" class="install-link" data-action="install-app">Install app</button>`
@@ -936,6 +1372,87 @@ function renderHistoryJobCard(job) {
   `;
 }
 
+function renderAuthPanel() {
+  const actionDisabled = state.auth.isBusy || state.auth.isSyncing ? "disabled" : "";
+
+  if (!state.auth.isConfigured) {
+    return `
+      <article class="panel">
+        <div class="section-header">
+          <div>
+            <h3>Account sync</h3>
+            <p>Google login and email login are ready, but this deploy still needs Supabase public keys.</p>
+          </div>
+        </div>
+        <p class="subtle-copy">Set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in Netlify for production, and in the local preview backend if you want to test sign-in outside Netlify.</p>
+      </article>
+    `;
+  }
+
+  if (!state.auth.user) {
+    return `
+      <article class="panel">
+        <div class="section-header">
+          <div>
+            <h3>Account sync</h3>
+            <p>Sign in with Google first, or use email and password. Jobs stay local until you connect an account.</p>
+          </div>
+        </div>
+        <div class="field-grid two-up">
+          <label class="field-label">
+            <span>Email</span>
+            <input
+              class="field-input"
+              type="email"
+              value="${escapeHtml(state.authForm.email)}"
+              data-auth-field="email"
+              autocomplete="email"
+            />
+          </label>
+          <label class="field-label">
+            <span>Password</span>
+            <input
+              class="field-input"
+              type="password"
+              value="${escapeHtml(state.authForm.password)}"
+              data-auth-field="password"
+              autocomplete="current-password"
+            />
+          </label>
+        </div>
+        <div class="action-row auth-row">
+          ${renderButton("Continue with Google", `class="button button-primary" data-action="auth-google" ${actionDisabled}`)}
+          ${renderButton("Sign in", `class="button button-secondary" data-action="auth-sign-in" ${actionDisabled}`)}
+          ${renderButton("Create account", `class="button button-secondary" data-action="auth-sign-up" ${actionDisabled}`)}
+        </div>
+        <p class="subtle-copy">${escapeHtml(state.auth.statusMessage)}</p>
+      </article>
+    `;
+  }
+
+  return `
+    <article class="panel">
+      <div class="section-header">
+        <div>
+          <h3>Account sync</h3>
+          <p>Jobs are backed up to your account and can be pulled onto another device.</p>
+        </div>
+      </div>
+      <div class="metric-grid">
+        ${renderMetricTile("Signed in", state.auth.user.email || "Google account", "Your cloud sync identity")}
+        ${renderMetricTile("Cloud jobs", String(state.auth.remoteJobCount), "Rows stored in the jobs table")}
+      </div>
+      <p class="subtle-copy">${escapeHtml(state.auth.statusMessage)}</p>
+      <p class="subtle-copy">Last synced: ${escapeHtml(state.auth.lastSyncedAt ? new Date(state.auth.lastSyncedAt).toLocaleString() : "Not yet")}</p>
+      <p class="subtle-copy">Logo files still stay on this device for now. Jobs, company name, currency, and theme sync to the account.</p>
+      <div class="action-row auth-row">
+        ${renderButton("Sync now", `class="button button-primary" data-action="auth-sync" ${actionDisabled}`)}
+        ${renderButton("Sign out", `class="button button-secondary" data-action="auth-sign-out" ${actionDisabled}`)}
+      </div>
+    </article>
+  `;
+}
+
 function renderSettingsScreen() {
   const logoState = state.settings.logoDataUrl
     ? `<img class="logo-preview-image" src="${escapeHtml(state.settings.logoDataUrl)}" alt="Invoice logo preview" />`
@@ -953,6 +1470,8 @@ function renderSettingsScreen() {
           ${renderPill(state.settings.logoDataUrl ? "Logo ready" : "Name only", "inverse")}
         </div>
       </article>
+
+      ${renderAuthPanel()}
 
       <article class="panel">
         <div class="section-header">
@@ -1257,6 +1776,21 @@ function handleActionClick(action, element) {
     case "export-job":
       handleExport(jobId);
       break;
+    case "auth-google":
+      handleGoogleSignIn();
+      break;
+    case "auth-sign-in":
+      handleEmailSignIn();
+      break;
+    case "auth-sign-up":
+      handleEmailSignUp();
+      break;
+    case "auth-sync":
+      handleManualCloudSync();
+      break;
+    case "auth-sign-out":
+      handleAccountSignOut();
+      break;
     case "choose-logo":
       logoInput.click();
       break;
@@ -1306,6 +1840,14 @@ appElement.addEventListener("click", (event) => {
 appElement.addEventListener("input", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+  const authField = target.dataset.authField;
+  if (authField) {
+    state.authForm = {
+      ...state.authForm,
+      [authField]: target.value,
+    };
+    return;
+  }
   const field = target.dataset.field;
   if (field && state.selectedTab === TABS.SETTINGS) {
     updateSetting(field, target.value);
@@ -1359,8 +1901,10 @@ window.addEventListener("focus", () => {
 
 async function start() {
   registerServiceWorker();
-  await loadServerConfig();
+  state.billing = createBillingState();
   normalizeUrlState();
+  await loadPublicConfig();
+  await initializeAuth();
   reminderEngine.sync(state.jobs);
   render();
 }
